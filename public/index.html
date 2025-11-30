@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Solo Leveling — Habit Quests</title>
+
+  <!-- UI libs (keep Daisy for dialog styling) -->
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@3.1.7/dist/full.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Custom theme -->
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+
+<body class="page">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="grid-overlay"></div>
+
+  <main class="shell">
+    <header class="hero">
+      <div class="hero__eyebrow">
+        <span class="pill pill--subtle">Solo Leveling</span>
+        <span class="pill pill--glow">New UI</span>
+      </div>
+      <h1>Forge habits like a hunter.</h1>
+      <p class="hero__lede">Track quests, earn XP, and move through your day with party-grade dashboards and a clean, focused flow.</p>
+      <div class="hero__tags">
+        <span class="pill">Live XP bar</span>
+        <span class="pill">Quest board</span>
+        <span class="pill">Groups + leaderboards</span>
+      </div>
+    </header>
+
+    <!-- ===== STATS (hidden until logged in) ===== -->
+    <section id="stats-wrap" class="hidden stats-panel panel">
+      <div class="stats-panel__header">
+        <div>
+          <p class="eyebrow">Current tier</p>
+          <div id="player-stats" class="stat-value"></div>
+        </div>
+        <div class="stats-panel__chips">
+          <span class="pill">Streak safe</span>
+          <span class="pill pill--accent">XP boosts live</span>
+        </div>
+      </div>
+      <div class="xp-track">
+        <div id="xp-fill" class="xp-fill"></div>
+      </div>
+      <div id="xp-text" class="xp-caption">0 / 100 XP</div>
+    </section>
+
+    <!-- ===== AUTH ===== -->
+    <section id="auth" class="auth-grid">
+      <div class="panel auth-card">
+        <div class="auth-card__head">
+          <p class="eyebrow">Welcome back</p>
+          <h2>Enter the gate</h2>
+          <p class="muted">Jump straight into your quest board.</p>
+        </div>
+        <input id="login-username" class="field" placeholder="Username">
+        <input id="login-password" class="field" type="password" placeholder="Password">
+        <button id="btn-login" class="btn primary">Log in</button>
+      </div>
+
+      <div class="panel auth-card accent">
+        <div class="auth-card__head">
+          <p class="eyebrow">New hunter</p>
+          <h2>Awaken</h2>
+          <p class="muted">Create an account and start earning XP.</p>
+        </div>
+        <input id="reg-username" class="field" placeholder="Username">
+        <input id="reg-email" class="field" placeholder="Email">
+        <input id="reg-password" class="field" type="password" placeholder="Password">
+        <button id="btn-register" class="btn secondary">Register</button>
+      </div>
+    </section>
+
+    <!-- ===== DASHBOARD (logged-in) ===== -->
+    <section id="dashboard" class="hidden dashboard-grid">
+      <div class="panel">
+        <div class="panel__head">
+          <div>
+            <p class="eyebrow">New quest</p>
+            <h3>Add to your run</h3>
+          </div>
+          <span class="pill pill--subtle">+XP</span>
+        </div>
+
+        <input id="q-title" class="field" placeholder="Quest title">
+        <textarea id="q-desc" class="field field--area" placeholder="Description"></textarea>
+        <label class="field__label">Due date</label>
+        <input id="q-due" type="date" class="field">
+
+        <label class="field__label">Difficulty</label>
+        <select id="q-diff" class="field">
+          <option value="easy">Easy</option>
+          <option value="medium" selected>Medium</option>
+          <option value="hard">Hard</option>
+          <option value="epic">Epic</option>
+        </select>
+
+        <button id="btn-add" class="btn primary wide">Add quest</button>
+      </div>
+
+      <div class="panel aura-card">
+        <div class="panel__head">
+          <div>
+            <p class="eyebrow">Quest board</p>
+            <h3>Your quests</h3>
+          </div>
+          <div class="panel__actions">
+            <span class="pill pill--subtle">Live</span>
+            <span class="pill">Earn / Fail</span>
+          </div>
+        </div>
+        <div class="quest-list">
+          <ul id="quest-list"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== GROUPS PAGE (logged-in) ===== -->
+    <section id="groups-page" class="hidden groups-grid">
+      <div class="panel panel--stack">
+        <div class="panel__head">
+          <div>
+            <p class="eyebrow">Party up</p>
+            <h3>Groups</h3>
+          </div>
+          <button id="btn-back" class="btn ghost">← Back</button>
+        </div>
+
+        <div class="panel panel--inline">
+          <div class="panel__head">
+            <h4>Create or join</h4>
+            <p class="muted">Recruit allies or dive into existing leaderboards.</p>
+          </div>
+          <div class="group-forms">
+            <input id="create-group-name" class="field" placeholder="New group name" />
+            <button id="btn-create-group" class="btn secondary wide">Create group</button>
+            <div class="group-join">
+              <input id="join-group-name" class="field" placeholder="Join by name..." />
+              <button id="btn-join-by-name" class="btn primary wide">Join</button>
+            </div>
+          </div>
+          <p id="groups-error" class="error-text"></p>
+        </div>
+
+        <div class="groups-columns">
+          <div class="panel panel--inline">
+            <div class="panel__head">
+              <h4>My groups</h4>
+            </div>
+            <ul id="my-groups" class="groups-list"></ul>
+          </div>
+          <div class="panel panel--inline">
+            <div class="panel__head">
+              <h4>Browse public</h4>
+            </div>
+            <ul id="all-groups" class="groups-list"></ul>
+          </div>
+        </div>
+
+        <div class="panel panel--inline">
+          <div class="panel__head">
+            <h4>Leaderboard</h4>
+          </div>
+          <div id="lb-wrap" class="leaderboard">Pick a group to view its leaderboard.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===== NAVBAR (hidden until logged in) ===== -->
+  <nav id="navbar" class="navbar">
+    <button id="nav-dashboard" class="btn nav-btn requires-auth">🏠 Dashboard</button>
+    <button id="nav-groups" class="btn nav-btn requires-auth">🏆 Groups</button>
+    <button id="btn-logout" class="btn danger nav-btn">🚪 Logout</button>
+  </nav>
+
+  <dialog id="delete-modal" class="modal">
+    <div class="modal-box bg-[#0f1824]">
+      <h3 class="font-bold text-lg text-[#4cc9ff]">Delete this group?</h3>
+      <p class="py-2 opacity-80">This cannot be undone.</p>
+      <div class="modal-action">
+        <button id="dm-cancel" class="btn">Cancel</button>
+        <button id="dm-ok" class="btn bg-red-600 border-0 hover:bg-red-700">Delete</button>
+      </div>
+    </div>
+  </dialog>
+  <script src="/app.js"></script>
+</body>
+</html>
