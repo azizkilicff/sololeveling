@@ -12,6 +12,9 @@ const statsWrap   = $("stats-wrap");
 const stats       = $("player-stats");
 const xpFill      = $("xp-fill");
 const xpText      = $("xp-text");
+const streakPill  = $("streak-pill");
+const achPill     = $("achievements-pill");
+const achList     = $("achievement-list");
 
 const questList   = $("quest-list");
 const qTitle      = $("q-title");
@@ -106,10 +109,19 @@ async function refreshMe() {
     const xp = user.xp || 0;
     const level = user.level ?? computeLevel(xp);
     const xpInLevel = xp % 100;
+    const streak = user.streak || 0;
+    const achievements = user.achievements || [];
 
     stats.textContent = `Level ${level} • Total XP ${xp}`;
     if (xpFill) xpFill.style.width = `${xpInLevel}%`;
     if (xpText) xpText.textContent = `${xpInLevel} / 100 XP for this level`;
+    if (streakPill) streakPill.textContent = `Streak: ${streak} day${streak === 1 ? "" : "s"}`;
+    if (achPill) achPill.textContent = `Achievements: ${achievements.length}`;
+    if (achList) {
+      achList.innerHTML = achievements.length
+        ? achievements.map(a => `<li class="pill pill--mini">${prettyAchievement(a.code)} <span class="ach-date">${(a.earned_at || "").slice(0,10)}</span></li>`).join("")
+        : '<li class="muted">No achievements yet. Finish quests to start earning.</li>';
+    }
 
     showDashboard();
     await loadQuests();
@@ -197,6 +209,17 @@ async function finish(q, action) {
   } catch (e) {
     alert(e.message);
   }
+}
+
+function prettyAchievement(code) {
+  const map = {
+    first_quest: "First Quest",
+    streak_3: "3-Day Streak",
+    streak_7: "7-Day Streak",
+    level_5: "Level 5 Reached",
+    level_10: "Level 10 Reached"
+  };
+  return map[code] || code;
 }
 
 // ===== Groups =====

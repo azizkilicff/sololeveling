@@ -7,6 +7,7 @@ header('Content-Type: application/json');
 require __DIR__ . '/../config/db.php';
 require __DIR__ . '/../lib/auth.php';
 require_login();
+ensure_progress_tables($pdo);
 
 $user_id = (int)$_SESSION['user_id'];
 $input   = json_decode(file_get_contents('php://input'), true) ?? [];
@@ -37,8 +38,17 @@ try {
     $xp = (int)$pdo->query("SELECT xp FROM users WHERE id = $user_id")->fetchColumn();
     $level = level_from_xp($xp);
 
-    $pdo->commit();
-    echo json_encode(['ok'=>true, 'xp_gained'=>$gain, 'xp'=>$xp, 'level'=>$level]);
+    $streak = update_streak_on_completion($pdo, $user_id);
+
+    $earned = [];
+    if (award_achievement($pdo, $user_id, 'first_quest')) $earned[] = 'first_quest';
+    if ($streak >= 3 && award_achievement($pdo, $user_id, 'streak_3')) $earned[] = 'streak_3';
+    if ($streak >= 7 && award_achievement($pdo, $user_id, 'streak_7')) $earned[] = 'streak_7';
+    if ($level >= 5 && award_achievement($pdo, $user_id, 'level_5')) $earned[] = 'level_5';
+    if ($level >= 10 && award_achievement($pdo, $user_id, 'level_10')) $earned[] = 'level_10';
+
+    if ($pdo->inTransaction()) { $pdo->commit(); }
+    echo json_encode(['ok'=>true, 'xp_gained'=>$gain, 'xp'=>$xp, 'level'=>$level, 'streak'=>$streak, 'earned'=>$earned]);
     exit;
   }
 
@@ -54,8 +64,9 @@ try {
 
     $xp = (int)$pdo->query("SELECT xp FROM users WHERE id = $user_id")->fetchColumn();
     $level = level_from_xp($xp);
+    reset_streak($pdo, $user_id);
 
-    $pdo->commit();
+    if ($pdo->inTransaction()) { $pdo->commit(); }
     echo json_encode(['ok'=>true, 'xp_lost'=>$loss, 'xp'=>$xp, 'level'=>$level]);
     exit;
   }

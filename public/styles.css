@@ -21,7 +21,7 @@ html,body{height:100%;}
   margin:0;
   font-family:'Space Grotesk', 'Inter', system-ui, -apple-system, sans-serif;
   color:var(--text);
-  background:#05070f;
+  background:#0b1224;
   overflow-x:hidden;
   position:relative;
   min-height:100vh;
@@ -32,8 +32,8 @@ html,body{height:100%;}
   inset:0;
   z-index:-1;
   background:
-    radial-gradient(1200px 900px at 50% 0%, #10152a 10%, #060913 55%, #03050b 100%),
-    linear-gradient(180deg, #05070f 0%, #05070f 35%, #04060d 70%, #05070f 100%);
+    radial-gradient(1200px 900px at 50% 0%, #1a2744 10%, #0f1a30 55%, #0a1326 100%),
+    linear-gradient(180deg, #0d162b 0%, #0b1426 35%, #0a1223 70%, #0b1426 100%);
   background-repeat:no-repeat;
   background-size:cover;
 }
@@ -187,6 +187,11 @@ html,body{height:100%;}
   transition: width .5s ease;
 }
 .xp-caption{ color:var(--muted); font-size:0.95rem; margin:0; }
+.achievements{
+  list-style:none; padding:0; margin:0.6rem 0 0;
+  display:flex; flex-wrap:wrap; gap:0.45rem;
+}
+.achievements .ach-date{ color:var(--muted); font-size:0.8rem; margin-left:6px; }
 
 /* ===== Dashboard ===== */
 .dashboard-grid{
