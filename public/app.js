@@ -107,9 +107,9 @@ async function refreshMe() {
     const level = user.level ?? computeLevel(xp);
     const xpInLevel = xp % 100;
 
-    stats.textContent = `Level ${level} • ${xp} XP`;
+    stats.textContent = `Level ${level} • Total XP ${xp}`;
     if (xpFill) xpFill.style.width = `${xpInLevel}%`;
-    if (xpText) xpText.textContent = `${xpInLevel} / 100 XP`;
+    if (xpText) xpText.textContent = `${xpInLevel} / 100 XP for this level`;
 
     showDashboard();
     await loadQuests();
@@ -129,12 +129,23 @@ async function loadQuests() {
 
   quests.forEach(q => {
     const li = document.createElement("li");
-    li.className = "quest";
+    const diffClass = q.difficulty ? `diff-${q.difficulty}` : "diff-medium";
+    const dueDate = new Date(`${q.due_date}T23:59:59`);
+    const isOverdue = q.status === "pending" && (dueDate < new Date());
+
+    li.className = `quest quest-item ${diffClass} ${isOverdue ? "overdue" : ""}`;
 
     const left = document.createElement("div");
-    left.innerHTML =
-      `<div style="font-weight:700;font-size:1.05rem">${q.title}</div>
-       <div style="opacity:.85">Due ${q.due_date} — Reward ${q.reward_xp} / Penalty ${q.penalty_xp}</div>`;
+    left.innerHTML = `
+      <div class="quest-title">${q.title}</div>
+      <div class="quest-meta">
+        <span class="pill pill--mini ${isOverdue ? "pill--danger" : "pill--subtle"}">
+          Due ${q.due_date}${isOverdue ? " • Overdue" : ""}
+        </span>
+        <span class="pill pill--mini pill--reward">+${q.reward_xp} XP</span>
+        <span class="pill pill--mini pill--penalty">-${q.penalty_xp} XP</span>
+        <span class="pill pill--mini pill--diff">${q.difficulty || "medium"}</span>
+      </div>`;
 
     const right = document.createElement("div");
     right.className = "right";
@@ -153,13 +164,13 @@ async function loadQuests() {
       const b1 = document.createElement("button");
       b1.className = "btn";
       b1.textContent = "Complete";
-      b1.onclick = () => finish(q.id, "complete");
+      b1.onclick = () => finish(q, "complete");
 
       const b2 = document.createElement("button");
       b2.className = "btn btn-ghost";
       b2.textContent = "Fail";
       b2.style.marginLeft = ".5rem";
-      b2.onclick = () => finish(q.id, "fail");
+      b2.onclick = () => finish(q, "fail");
 
       right.appendChild(b1);
       right.appendChild(b2);
@@ -171,9 +182,17 @@ async function loadQuests() {
   });
 }
 
-async function finish(id, action) {
+async function finish(q, action) {
   try {
-    await api("api/complete.php", "POST", { id, action });
+    const dueDate = new Date(`${q.due_date}T23:59:59`);
+    const isOverdue = q.status === "pending" && (dueDate < new Date());
+    const prompt =
+      (action === "complete")
+        ? `Mark "${q.title}" complete? Reward: +${q.reward_xp} XP${isOverdue ? " (overdue)" : ""}`
+        : `Fail "${q.title}"? Penalty: -${q.penalty_xp} XP${isOverdue ? " (overdue)" : ""}`;
+    if (!confirm(prompt)) return;
+
+    await api("api/complete.php", "POST", { id: q.id, action });
     await refreshMe();
   } catch (e) {
     alert(e.message);
@@ -184,16 +203,19 @@ async function finish(id, action) {
 async function loadGroups() {
   const data = await api("api/groups.php?action=list");
   const mine = data.mine || [];
-  const all  = data.all  || [];
+  const mineIds = new Set(mine.map(g => g.id));
+  const all  = (data.all || []).filter(g => !mineIds.has(g.id));
 
   // My Groups
   myGroups.innerHTML = (!mine.length)
     ? '<li class="opacity-70">No groups yet.</li>'
     : mine.map(g => `
       <li class="flex justify-between items-center p-3 rounded bg-[#0b131a] border border-[#1d2a38]">
-        <span>${g.name} <span class="opacity-60">(members: ${g.members})</span></span>
+        <span class="flex items-center gap-2">
+          <button class="pill pill--mini pill--link" data-lb="${g.id}">${g.name}</button>
+          <span class="opacity-60">(members: ${g.members})</span>
+        </span>
         <span class="flex gap-2">
-          <button class="btn btn-xs aura-btn" data-lb="${g.id}">Leaderboard</button>
           ${
             (g.owner_user_id === CURRENT_USER_ID)
               ? `<button class="btn btn-xs bg-red-600 border-0 hover:bg-red-700" data-delete="${g.id}">Delete</button>`
@@ -207,9 +229,11 @@ async function loadGroups() {
     ? '<li class="opacity-70">No public groups found.</li>'
     : all.map(g => `
       <li class="flex justify-between items-center p-3 rounded bg-[#0b131a] border border-[#1d2a38]">
-        <span>${g.name} <span class="opacity-60">(members: ${g.members})</span></span>
+        <span class="flex items-center gap-2">
+          <button class="pill pill--mini pill--link" data-lb="${g.id}">${g.name}</button>
+          <span class="opacity-60">(members: ${g.members})</span>
+        </span>
         <span class="flex gap-2">
-          <button class="btn btn-xs aura-btn" data-lb="${g.id}">Leaderboard</button>
           <button class="btn btn-xs aura-btn" data-join="${g.name}">Join</button>
         </span>
       </li>`).join("");
@@ -273,6 +297,7 @@ async function leaveGroup(groupId) {
     groupsErrorEl.textContent = "";
     await api("api/groups.php", "POST", { action: "leave", group_id: groupId });
     await loadGroups();
+    lbWrap.innerHTML = "Pick a group to view its leaderboard.";
   } catch (e) {
     groupsErrorEl.textContent = e.message;
   }
@@ -293,6 +318,7 @@ $("dm-ok")?.addEventListener("click", async () => {
   pendingDeleteGroupId = null;
   await api("api/groups.php", "POST", { action: "delete", group_id: gid });
   await loadGroups();
+  lbWrap.innerHTML = "Pick a group to view its leaderboard.";
 });
 
 // ===== Navbar show/hide on scroll (keeps nav, hides buttons on auth) =====
@@ -304,19 +330,20 @@ function nudgeNavVisible(ms = 800) { navForceUntil = performance.now() + ms; sho
 
 function onScroll() {
   const y = window.scrollY;
-  const now = performance.now();
-
   const onAuth = !auth.classList.contains("hidden");
   if (onAuth) { hideNav(); lastY = y; return; }
 
-  const nearTop = y < 24;
-  const nearBottom = (window.innerHeight + y) > (document.documentElement.scrollHeight - 24);
-
-  if (nearTop || nearBottom || now < navForceUntil) {
+  const nearTop = y < 16;
+  if (nearTop || performance.now() < navForceUntil) {
     showNav();
-  } else {
-    if (y > lastY + 6) hideNav();
-    else if (y < lastY - 6) showNav();
+    lastY = y;
+    return;
+  }
+
+  if (y > lastY + 4) {
+    hideNav(); // scrolling down
+  } else if (y < lastY - 4) {
+    showNav(); // scrolling up
   }
   lastY = y;
 }

@@ -23,10 +23,6 @@
 
   <main class="shell">
     <header class="hero">
-      <div class="hero__eyebrow">
-        <span class="pill pill--subtle">Solo Leveling</span>
-        <span class="pill pill--glow">New UI</span>
-      </div>
       <h1>Forge habits like a hunter.</h1>
       <p class="hero__lede">Track quests, earn XP, and move through your day with party-grade dashboards and a clean, focused flow.</p>
       <div class="hero__tags">
@@ -147,9 +143,10 @@
               <input id="join-group-name" class="field" placeholder="Join by name..." />
               <button id="btn-join-by-name" class="btn primary wide">Join</button>
             </div>
-          </div>
-          <p id="groups-error" class="error-text"></p>
         </div>
+        <p id="groups-error" class="error-text"></p>
+        <p class="muted text-sm">Groups are public; keep shared details non-sensitive.</p>
+      </div>
 
         <div class="groups-columns">
           <div class="panel panel--inline">
@@ -178,9 +175,17 @@
 
   <!-- ===== NAVBAR (hidden until logged in) ===== -->
   <nav id="navbar" class="navbar">
-    <button id="nav-dashboard" class="btn nav-btn requires-auth">🏠 Dashboard</button>
-    <button id="nav-groups" class="btn nav-btn requires-auth">🏆 Groups</button>
-    <button id="btn-logout" class="btn danger nav-btn">🚪 Logout</button>
+    <div class="navbar__inner">
+      <div class="navbar__brand">
+        <div class="logo-dot"></div>
+        <span class="logo-text">Solo Leveling</span>
+      </div>
+      <div class="navbar__actions">
+        <button id="nav-dashboard" class="btn nav-btn requires-auth">🏠 Dashboard</button>
+        <button id="nav-groups" class="btn nav-btn requires-auth">🏆 Groups</button>
+        <button id="btn-logout" class="btn danger nav-btn">🚪 Logout</button>
+      </div>
+    </div>
   </nav>
 
   <dialog id="delete-modal" class="modal">
