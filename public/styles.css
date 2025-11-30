@@ -292,6 +292,7 @@ html,body{height:100%;}
 .pill--ghost{ background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.1); }
 
 .action-chip-row{ display:flex; gap:0.4rem; align-items:center; }
+.action-chip-col{ align-items:flex-end; }
 .chip-btn{
   padding:0.35rem 0.7rem;
   border-radius:10px;
@@ -304,6 +305,26 @@ html,body{height:100%;}
 }
 .chip-btn:hover{ transform:translateY(-1px); filter:brightness(1.05); }
 .chip-btn.danger{ background:rgba(255,107,107,0.15); border-color:rgba(255,107,107,0.35); color:#ffe2e2; }
+.chip-btn.mini{ padding:0.28rem 0.6rem; font-size:0.9rem; }
+
+.request-box{
+  margin-top:0.35rem;
+  padding:0.6rem;
+  border-radius:10px;
+  background:rgba(8,12,22,0.8);
+  border:1px solid rgba(124,240,255,0.08);
+  box-shadow:0 10px 24px rgba(0,0,0,0.35);
+  font-size:0.92rem;
+}
+.request-title{
+  font-size:0.85rem; font-weight:700; color:#dfe7ff; margin-bottom:0.25rem;
+}
+.request-row{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0.15rem 0;
+}
+.request-user{ color:var(--text); font-size:0.9rem; }
+.request-actions{ display:flex; gap:0.4rem; }
 
 .badge{
   padding:.18rem .6rem; border-radius:999px; font-size:.82rem; font-weight:700;

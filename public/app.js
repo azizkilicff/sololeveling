@@ -317,81 +317,196 @@ function renderProfile() {
 
 // ===== Groups =====
 async function loadGroups() {
+
   const data = await api("api/groups.php?action=list");
   const mine = data.mine || [];
   const mineIds = new Set(mine.map(g => g.id));
   const all  = (data.all || []).filter(g => !mineIds.has(g.id));
 
-  // My Groups
+  // -----------------------------
+  // RENDER — MY GROUPS
+  // -----------------------------
   myGroups.innerHTML = (!mine.length)
     ? '<li class="opacity-70">No groups yet.</li>'
     : mine.map(g => `
       <li class="flex justify-between items-center p-3 rounded bg-[#0b131a] border border-[#1d2a38]">
+
         <span class="flex items-center gap-2">
           <span class="pill pill--mini pill--ghost">${g.name}</span>
           <span class="opacity-60">(members: ${g.members})</span>
         </span>
-        <span class="flex gap-2 action-chip-row">
-          <button class="chip-btn" data-lb="${g.id}">List</button>
+
+        <span class="flex flex-col gap-2 action-chip-col">
+
+          <span class="flex gap-2 action-chip-row">
+            <button class="chip-btn" data-lb="${g.id}">List</button>
+            ${
+              (g.owner_user_id === CURRENT_USER_ID)
+                ? `<button class="chip-btn danger" data-delete="${g.id}">Delete</button>`
+                : `<button class="chip-btn danger" data-leave="${g.id}">Leave</button>`
+            }
+          </span>
+
           ${
-            (g.owner_user_id === CURRENT_USER_ID)
-              ? `<button class="chip-btn danger" data-delete="${g.id}">Delete</button>`
-              : `<button class="chip-btn danger" data-leave="${g.id}">Leave</button>`
+            (g.owner_user_id === CURRENT_USER_ID && g.join_mode === "request" && g.requests?.length)
+              ? `
+                <div class="request-box">
+                  <div class="request-title">Join Requests</div>
+                  ${g.requests.map(r => `
+                    <div class="request-row">
+                      <span class="request-user">${r.username}</span>
+                      <span class="request-actions">
+                        <button class="chip-btn mini" data-approve="${g.id}:${r.user_id}">Approve</button>
+                        <button class="chip-btn mini danger" data-reject="${g.id}:${r.user_id}">Reject</button>
+                      </span>
+                    </div>
+                  `).join("")}
+                </div>
+              `
+              : ""
           }
+
         </span>
       </li>`).join("");
 
-  // All Groups (browse/join)
-  allGroups.innerHTML = (!all.length)
-    ? '<li class="opacity-70">No public groups found.</li>'
-    : all.map(g => `
-      <li class="flex justify-between items-center p-3 rounded bg-[#0b131a] border border-[#1d2a38]">
-        <span class="flex items-center gap-2">
-          <span class="pill pill--mini pill--ghost">${g.name}</span>
-          <span class="opacity-60">(members: ${g.members})</span>
-        </span>
-        <span class="flex gap-2 action-chip-row">
-          <button class="chip-btn" data-lb="${g.id}">List</button>
-          <button class="chip-btn" data-join="${g.name}">Join</button>
-        </span>
-      </li>`).join("");
 
-  // Attach handlers
+// -----------------------------
+// RENDER — ALL GROUPS
+// -----------------------------
+allGroups.innerHTML = (!all.length)
+  ? '<li class="opacity-70">No public groups found.</li>'
+  : all.map(g => `
+    <li class="flex justify-between items-center p-3 rounded bg-[#0b131a] border border-[#1d2a38]">
+
+      <span class="flex items-center gap-2">
+        <span class="pill pill--mini pill--ghost">${g.name}</span>
+        <span class="opacity-60">(members: ${g.members})</span>
+      </span>
+
+      <span class="flex gap-2 action-chip-row">
+
+        <button class="chip-btn" data-lb="${g.id}">List</button>
+
+        ${
+          // --- OPEN GROUP ---
+          g.join_mode === "open"
+            ? `<button class="chip-btn" data-join="${g.name}">Join</button>`
+
+          // --- REQUEST GROUP ---
+          : g.requested_by_me
+              ? `<button class="chip-btn mini opacity-50" disabled>Requested ✓</button>`
+              : `<button class="chip-btn" data-request="${g.id}">Request to Join</button>`
+        }
+
+      </span>
+
+    </li>`).join("");
+
+
+  // ==========================================================
+  // ===============   EVENT HANDLERS (INSIDE)   ===============
+  // ==========================================================
+
+  // My Groups — Leaderboard
   myGroups.querySelectorAll("[data-lb]").forEach(b =>
-    b.addEventListener("click", () => loadLeaderboard(parseInt(b.dataset.lb,10))));
-  myGroups.querySelectorAll("[data-leave]").forEach(b =>
-    b.addEventListener("click", () => leaveGroup(parseInt(b.dataset.leave,10))));
-  myGroups.querySelectorAll("[data-delete]").forEach(b =>
-    b.addEventListener("click", () => openDeleteModal(parseInt(b.dataset.delete,10))));
+    b.addEventListener("click", () =>
+      loadLeaderboard(parseInt(b.dataset.lb, 10)))
+  );
 
+  // My Groups — Leave
+  myGroups.querySelectorAll("[data-leave]").forEach(b =>
+    b.addEventListener("click", () =>
+      leaveGroup(parseInt(b.dataset.leave, 10)))
+  );
+
+  // My Groups — Delete (owner)
+  myGroups.querySelectorAll("[data-delete]").forEach(b =>
+    b.addEventListener("click", () =>
+      openDeleteModal(parseInt(b.dataset.delete, 10)))
+  );
+
+  // ALL Groups — Leaderboard
   allGroups.querySelectorAll("[data-lb]").forEach(b =>
-    b.addEventListener("click", () => loadLeaderboard(parseInt(b.dataset.lb,10))));
+    b.addEventListener("click", () =>
+      alert("This leaderboard is restricted. Join the group to view it.")))
+
+  // ALL Groups — Join (open mode)
   allGroups.querySelectorAll("[data-join]").forEach(b =>
-    b.addEventListener("click", () => joinGroupByName(b.dataset.join)));
-}
+    b.addEventListener("click", () =>
+      joinGroupByName(b.dataset.join))
+  );
+
+  // ALL Groups — Request to Join
+  allGroups.querySelectorAll("[data-request]").forEach(b =>
+    b.addEventListener("click", () =>
+      requestJoin(parseInt(b.dataset.request, 10)))
+  );
+
+// OWNER — Approve request
+myGroups.querySelectorAll("[data-approve]").forEach(b => {
+  const [gid, uid] = b.dataset.approve.split(":").map(Number);
+  b.addEventListener("click", () =>
+    approveJoinRequest(gid, uid));
+});
+
+  // OWNER — Reject request
+  myGroups.querySelectorAll("[data-reject]").forEach(b => {
+    const [gid, uid] = b.dataset.reject.split(":").map(Number);
+    b.addEventListener("click", () =>
+      rejectJoinRequest(gid, uid));
+  });
+
+} // <===== CLOSE loadGroups() PROPERLY ⬆⬆⬆
+
 
 async function loadLeaderboard(groupId) {
   lbWrap.innerHTML = "Loading…";
-  const { leaders } = await api(`api/groups.php?action=leaderboard&group_id=${groupId}`);
+  const data = await api(`api/groups.php?action=leaderboard&group_id=${groupId}`);
+  const leaders = data.leaders || [];
+  const ownerId = data.owner_user_id;
+  const isOwner = ownerId === CURRENT_USER_ID;
   if (!leaders || !leaders.length) {
     lbWrap.innerHTML = "No members yet.";
     return;
   }
   lbWrap.innerHTML = leaders.map((u, i) =>
-    `<div class="flex justify-between p-2">
+    `<div class="flex justify-between items-center p-2">
        <span>#${i+1} ${u.username}</span>
-       <span>${u.xp} XP</span>
+       <span class="flex items-center gap-2">
+         <span>${u.xp} XP</span>
+         ${
+           (isOwner && u.user_id !== CURRENT_USER_ID)
+             ? `<button class="chip-btn mini danger" data-kick-member="${groupId}:${u.user_id}">Kick</button>`
+             : ""
+         }
+       </span>
      </div>`).join("");
+
+  lbWrap.querySelectorAll("[data-kick-member]").forEach(b => {
+    const [gid, uid] = b.dataset.kickMember.split(":").map(Number);
+    b.addEventListener("click", () => kickMember(gid, uid));
+  });
 }
 
 async function createGroup() {
   try {
     groupsErrorEl.textContent = "";
+
     const name = (createInput?.value || "").trim();
     if (!name) throw new Error("Enter a group name");
-    await api("api/groups.php", "POST", { action: "create", name });
+
+    // NEW: read join mode dropdown
+    const join_mode = document.getElementById("create-group-join-mode")?.value || "open";
+
+    await api("api/groups.php", "POST", {
+      action: "create",
+      name,
+      join_mode
+    });
+
     if (createInput) createInput.value = "";
     await loadGroups();
+
   } catch (e) {
     groupsErrorEl.textContent = e.message;
   }
@@ -410,10 +525,60 @@ async function joinGroupByName(nameFromBtn) {
   }
 }
 
+async function requestJoin(groupId) {
+  try {
+    groupsErrorEl.textContent = "";
+    await api("api/groups.php", "POST", { action: "join", group_id: groupId });
+    await loadGroups();
+  } catch (e) {
+    groupsErrorEl.textContent = e.message;
+  }
+}
+
+async function approveJoinRequest(groupId, userId) {
+  try {
+    await api("api/groups.php", "POST", {
+      action: "approve_request",
+      group_id: groupId,
+      user_id: userId
+    });
+    await loadGroups();
+  } catch (e) {
+    groupsErrorEl.textContent = e.message;
+  }
+}
+
+async function rejectJoinRequest(groupId, userId) {
+  try {
+    await api("api/groups.php", "POST", {
+      action: "reject_request",
+      group_id: groupId,
+      user_id: userId
+    });
+    await loadGroups();
+  } catch (e) {
+    groupsErrorEl.textContent = e.message;
+  }
+}
+
 async function leaveGroup(groupId) {
   try {
     groupsErrorEl.textContent = "";
     await api("api/groups.php", "POST", { action: "leave", group_id: groupId });
+    await loadGroups();
+    lbWrap.innerHTML = "Pick a group to view its leaderboard.";
+  } catch (e) {
+    groupsErrorEl.textContent = e.message;
+  }
+}
+
+async function kickMember(groupId, userId) {
+  try {
+    await api("api/groups.php", "POST", {
+      action: "kick",
+      group_id: groupId,
+      user_id: userId
+    });
     await loadGroups();
     lbWrap.innerHTML = "Pick a group to view its leaderboard.";
   } catch (e) {

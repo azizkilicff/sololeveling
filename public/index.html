@@ -163,58 +163,98 @@
       </div>
     </section>
 
-    <!-- ===== GROUPS PAGE (logged-in) ===== -->
-    <section id="groups-page" class="hidden groups-grid">
-      <div class="panel panel--stack">
+   <!-- ===== GROUPS PAGE (logged-in) ===== -->
+<section id="groups-page" class="hidden groups-grid">
+  <div class="panel panel--stack">
+
+    <!-- HEADER -->
+    <div class="panel__head">
+      <div>
+        <p class="eyebrow">Party up</p>
+        <h3>Groups</h3>
+      </div>
+      <button id="btn-back" class="btn ghost">← Back</button>
+    </div>
+
+    <!-- CREATE / JOIN -->
+    <div class="panel panel--inline">
+      <div class="panel__head">
+        <h4>Create or join</h4>
+        <p class="muted">Recruit allies or dive into existing leaderboards.</p>
+      </div>
+
+      <div class="group-forms">
+
+        <!-- Create Group -->
+        <input id="create-group-name" class="field" placeholder="New group name" />
+
+        <!-- NEW: Join mode dropdown -->
+        <select id="create-group-join-mode" class="field">
+          <option value="open">Open (anyone can join)</option>
+          <option value="request">Request Only (owner approves)</option>
+        </select>
+
+        <button id="btn-create-group" class="btn secondary wide">Create group</button>
+
+        <!-- Join by name -->
+        <div class="group-join">
+          <input id="join-group-name" class="field" placeholder="Join by name..." />
+          <button id="btn-join-by-name" class="btn primary wide">Join</button>
+        </div>
+
+      </div>
+
+      <p id="groups-error" class="error-text"></p>
+      <p class="muted text-sm">Groups are public; keep shared details non-sensitive.</p>
+    </div>
+
+
+    <!-- MY GROUPS / ALL GROUPS -->
+    <div class="groups-columns">
+
+      <!-- YOUR GROUPS -->
+      <div class="panel panel--inline">
         <div class="panel__head">
-          <div>
-            <p class="eyebrow">Party up</p>
-            <h3>Groups</h3>
-          </div>
-          <button id="btn-back" class="btn ghost">← Back</button>
+          <h4>My groups</h4>
         </div>
-
-        <div class="panel panel--inline">
-          <div class="panel__head">
-            <h4>Create or join</h4>
-            <p class="muted">Recruit allies or dive into existing leaderboards.</p>
-          </div>
-          <div class="group-forms">
-            <input id="create-group-name" class="field" placeholder="New group name" />
-            <button id="btn-create-group" class="btn secondary wide">Create group</button>
-            <div class="group-join">
-              <input id="join-group-name" class="field" placeholder="Join by name..." />
-              <button id="btn-join-by-name" class="btn primary wide">Join</button>
-            </div>
-        </div>
-        <p id="groups-error" class="error-text"></p>
-        <p class="muted text-sm">Groups are public; keep shared details non-sensitive.</p>
+        <ul id="my-groups" class="groups-list"></ul>
       </div>
 
-        <div class="groups-columns">
-          <div class="panel panel--inline">
-            <div class="panel__head">
-              <h4>My groups</h4>
-            </div>
-            <ul id="my-groups" class="groups-list"></ul>
-          </div>
-          <div class="panel panel--inline">
-            <div class="panel__head">
-              <h4>Browse public</h4>
-            </div>
-            <ul id="all-groups" class="groups-list"></ul>
-          </div>
+      <!-- PUBLIC GROUPS -->
+      <div class="panel panel--inline">
+        <div class="panel__head">
+          <h4>Browse public</h4>
         </div>
-
-        <div class="panel panel--inline">
-          <div class="panel__head">
-            <h4>Leaderboard</h4>
-          </div>
-          <div id="lb-wrap" class="leaderboard">Pick a group to view its leaderboard.</div>
-        </div>
+        <ul id="all-groups" class="groups-list"></ul>
       </div>
-    </section>
-  </main>
+
+    </div>
+
+    <!-- LEADERBOARD -->
+    <div class="panel panel--inline">
+      <div class="panel__head">
+        <h4>Leaderboard</h4>
+      </div>
+      <div id="lb-wrap" class="leaderboard">
+        Pick a group to view its leaderboard.
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- Delete Group Modal -->
+<dialog id="delete-modal" class="modal">
+  <div class="modal-box bg-[#0f1824]">
+    <h3 class="font-bold text-lg text-[#f55] mb-3">Delete Group?</h3>
+    <p class="muted mb-4">This action cannot be undone.</p>
+
+    <div class="modal-action">
+      <button id="dm-cancel" class="btn ghost">Cancel</button>
+      <button id="dm-ok" class="btn danger">Delete</button>
+    </div>
+  </div>
+</dialog>
 
   <!-- ===== NAVBAR (hidden until logged in) ===== -->
   <nav id="navbar" class="navbar hidden">
