@@ -15,6 +15,9 @@ const xpText      = $("xp-text");
 const streakPill  = $("streak-pill");
 const achPill     = $("achievements-pill");
 const achList     = $("achievement-list");
+const addModal    = $("add-quest-modal");
+const addCancel   = $("add-cancel");
+const openAddBtn  = $("open-add");
 
 const questList   = $("quest-list");
 const qTitle      = $("q-title");
@@ -28,6 +31,7 @@ const btnLogout   = $("btn-logout");
 const loginUser   = $("login-username");
 const loginPass   = $("login-password");
 const regUser     = $("reg-username");
+const regName     = $("reg-name");
 const regEmail    = $("reg-email");
 const regPass     = $("reg-password");
 const loginCard   = $("login-card");
@@ -37,6 +41,19 @@ const showLogin   = $("show-login");
 const heroStart   = $("hero-start");
 const heroLogin   = $("hero-login");
 const heroSection = $("hero-section");
+const achievementsPage = $("achievements-page");
+const achievementsList = $("achievements-list");
+const navAchievementsBtn = $("nav-achievements");
+const profilePage = $("profile-page");
+const profileName = $("profile-name");
+const profileUsername = $("profile-username");
+const profileEmail = $("profile-email");
+const profileLevel = $("profile-level");
+const profileXp = $("profile-xp");
+const profileStreak = $("profile-streak");
+const profileAchList = $("profile-ach-list");
+const profileAvatar = $("profile-avatar");
+const navProfileBtn = $("nav-profile");
 
 // Groups page
 const groupsPage      = $("groups-page");
@@ -97,6 +114,7 @@ function showDashboard() {
   heroSection?.classList.add("hidden");
   statsWrap.classList.remove("hidden");
   dash.classList.remove("hidden");
+  achievementsPage?.classList.add("hidden");
   groupsPage.classList.add("hidden");
   document.body.classList.remove("auth-mode");
   navbar?.classList.remove("hidden");
@@ -108,14 +126,45 @@ function showGroups() {
   heroSection?.classList.add("hidden");
   statsWrap.classList.remove("hidden");
   dash.classList.add("hidden");
+  achievementsPage?.classList.add("hidden");
+  profilePage?.classList.add("hidden");
   groupsPage.classList.remove("hidden");
   document.body.classList.remove("auth-mode");
   navbar?.classList.remove("hidden");
   setAuthUI(true);  // show Dashboard/Groups buttons
 }
 
+function showAchievements() {
+  auth.classList.add("hidden");
+  heroSection?.classList.add("hidden");
+  statsWrap.classList.remove("hidden");
+  dash.classList.add("hidden");
+  groupsPage.classList.add("hidden");
+  achievementsPage?.classList.remove("hidden");
+  profilePage?.classList.add("hidden");
+  document.body.classList.remove("auth-mode");
+  navbar?.classList.remove("hidden");
+  setAuthUI(true);
+  renderAchievements();
+}
+
+function showProfile() {
+  auth.classList.add("hidden");
+  heroSection?.classList.add("hidden");
+  statsWrap.classList.remove("hidden");
+  dash.classList.add("hidden");
+  groupsPage.classList.add("hidden");
+  achievementsPage?.classList.add("hidden");
+  profilePage?.classList.remove("hidden");
+  document.body.classList.remove("auth-mode");
+  navbar?.classList.remove("hidden");
+  setAuthUI(true);
+}
+
 // ===== Me + XP bar =====
 let CURRENT_USER_ID = null;
+let LAST_ACHIEVEMENTS = [];
+let LAST_USER = null;
 
 async function refreshMe() {
   try {
@@ -127,17 +176,16 @@ async function refreshMe() {
     const xpInLevel = xp % 100;
     const streak = user.streak || 0;
     const achievements = user.achievements || [];
+    LAST_ACHIEVEMENTS = achievements;
+    LAST_USER = user;
 
     stats.textContent = `Level ${level} • Total XP ${xp}`;
     if (xpFill) xpFill.style.width = `${xpInLevel}%`;
     if (xpText) xpText.textContent = `${xpInLevel} / 100 XP for this level`;
     if (streakPill) streakPill.textContent = `Streak: ${streak} day${streak === 1 ? "" : "s"}`;
     if (achPill) achPill.textContent = `Achievements: ${achievements.length}`;
-    if (achList) {
-      achList.innerHTML = achievements.length
-        ? achievements.map(a => `<li class="pill pill--mini">${prettyAchievement(a.code)} <span class="ach-date">${(a.earned_at || "").slice(0,10)}</span></li>`).join("")
-        : '<li class="muted">No achievements yet. Finish quests to start earning.</li>';
-    }
+    if (achList) achList.innerHTML = renderAchievementsList(achievements);
+    renderAchievements();
 
     showDashboard();
     await loadQuests();
@@ -238,6 +286,35 @@ function prettyAchievement(code) {
   return map[code] || code;
 }
 
+function renderAchievementsList(achievements) {
+  if (!achievements || !achievements.length) {
+    return '<li class="muted">No achievements yet. Finish quests to start earning.</li>';
+  }
+  return achievements.map(a => `<li class="pill pill--mini">${prettyAchievement(a.code)} <span class="ach-date">${(a.earned_at || "").slice(0,10)}</span></li>`).join("");
+}
+
+function renderAchievements() {
+  if (achievementsList) {
+    achievementsList.innerHTML = renderAchievementsList(LAST_ACHIEVEMENTS);
+  }
+}
+
+function renderProfile() {
+  if (!LAST_USER || !profilePage) return;
+  profileName.textContent = LAST_USER.name || LAST_USER.username;
+  profileUsername.textContent = `@${LAST_USER.username}`;
+  profileEmail.textContent = LAST_USER.email || "";
+  profileLevel.textContent = LAST_USER.level ?? computeLevel(LAST_USER.xp || 0);
+  profileXp.textContent = LAST_USER.xp || 0;
+  profileStreak.textContent = `${LAST_USER.streak || 0} day${(LAST_USER.streak||0) === 1 ? "" : "s"}`;
+  if (profileAchList) profileAchList.innerHTML = renderAchievementsList(LAST_ACHIEVEMENTS);
+
+  if (profileAvatar && LAST_USER.username) {
+    const initials = (LAST_USER.name || LAST_USER.username).split(" ").map(s => s[0] || "").join("").slice(0,2).toUpperCase();
+    profileAvatar.textContent = initials;
+  }
+}
+
 // ===== Groups =====
 async function loadGroups() {
   const data = await api("api/groups.php?action=list");
@@ -251,14 +328,15 @@ async function loadGroups() {
     : mine.map(g => `
       <li class="flex justify-between items-center p-3 rounded bg-[#0b131a] border border-[#1d2a38]">
         <span class="flex items-center gap-2">
-          <button class="pill pill--mini pill--link" data-lb="${g.id}">${g.name}</button>
+          <span class="pill pill--mini pill--ghost">${g.name}</span>
           <span class="opacity-60">(members: ${g.members})</span>
         </span>
-        <span class="flex gap-2">
+        <span class="flex gap-2 action-chip-row">
+          <button class="chip-btn" data-lb="${g.id}">List</button>
           ${
             (g.owner_user_id === CURRENT_USER_ID)
-              ? `<button class="btn btn-xs bg-red-600 border-0 hover:bg-red-700" data-delete="${g.id}">Delete</button>`
-              : `<button class="btn btn-xs bg-red-600 border-0 hover:bg-red-700" data-leave="${g.id}">Leave</button>`
+              ? `<button class="chip-btn danger" data-delete="${g.id}">Delete</button>`
+              : `<button class="chip-btn danger" data-leave="${g.id}">Leave</button>`
           }
         </span>
       </li>`).join("");
@@ -269,11 +347,12 @@ async function loadGroups() {
     : all.map(g => `
       <li class="flex justify-between items-center p-3 rounded bg-[#0b131a] border border-[#1d2a38]">
         <span class="flex items-center gap-2">
-          <button class="pill pill--mini pill--link" data-lb="${g.id}">${g.name}</button>
+          <span class="pill pill--mini pill--ghost">${g.name}</span>
           <span class="opacity-60">(members: ${g.members})</span>
         </span>
-        <span class="flex gap-2">
-          <button class="btn btn-xs aura-btn" data-join="${g.name}">Join</button>
+        <span class="flex gap-2 action-chip-row">
+          <button class="chip-btn" data-lb="${g.id}">List</button>
+          <button class="chip-btn" data-join="${g.name}">Join</button>
         </span>
       </li>`).join("");
 
@@ -405,6 +484,7 @@ btnRegister?.addEventListener("click", async () => {
   try {
     await api("api/register.php", "POST", {
       username: (regUser.value || "").trim(),
+      name:     (regName.value || "").trim(),
       email:    (regEmail.value || "").trim(),
       password: regPass.value
     });
@@ -440,6 +520,11 @@ btnAdd?.addEventListener("click", async () => {
 navDashBtn?.addEventListener("click", showDashboard);
 btnBack?.addEventListener("click", showDashboard);
 navGroupsBtn?.addEventListener("click", async () => { showGroups(); await loadGroups(); });
+navAchievementsBtn?.addEventListener("click", showAchievements);
+navProfileBtn?.addEventListener("click", () => {
+  showProfile();
+  renderProfile();
+});
 
 // Groups actions
 btnCreateGroup?.addEventListener("click", createGroup);
@@ -465,6 +550,64 @@ heroLogin?.addEventListener("click", (e) => {
   e.preventDefault();
   signupCard?.classList.add("hidden");
   loginCard?.classList.remove("hidden");
+});
+
+// Add quest modal
+openAddBtn?.addEventListener("click", () => addModal?.showModal());
+addCancel?.addEventListener("click", () => addModal?.close());
+btnAdd?.addEventListener("click", () => addModal?.close());
+
+ // ===== AUTOCOMPLETE FOR QUEST TEMPLATES =====
+const sugList = $("template-suggestions");
+
+async function searchTemplates(text) {
+  if (!text || text.length < 1) {
+    sugList.classList.add("hidden");
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/search_templates.php?q=${encodeURIComponent(text)}`);
+    const items = await res.json();
+
+    if (!items.length) {
+      sugList.innerHTML = "";
+      sugList.classList.add("hidden");
+      return;
+    }
+
+    sugList.innerHTML = items.map(t =>
+      `<li class="p-2 hover:bg-[#1b2634] cursor-pointer"
+           data-id="${t.id}"
+           data-title="${t.title}"
+           data-desc="${t.description || ''}">
+           ${t.title}
+       </li>`
+    ).join("");
+
+    sugList.classList.remove("hidden");
+
+    sugList.querySelectorAll("li").forEach(li => {
+      li.onclick = () => {
+        qTitle.value = li.dataset.title;
+        qDesc.value  = li.dataset.desc;
+        sugList.classList.add("hidden");
+      };
+    });
+
+  } catch (err) {
+    console.error("Template search error:", err);
+  }
+}
+
+qTitle?.addEventListener("input", () => {
+  searchTemplates(qTitle.value.trim());
+});
+
+document.addEventListener("click", (e) => {
+  if (!sugList.contains(e.target) && e.target !== qTitle) {
+    sugList.classList.add("hidden");
+  }
 });
 
 // ===== Boot: start on Auth; refresh session if exists =====

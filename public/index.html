@@ -94,6 +94,7 @@
           <p class="muted">Register once, sync quests everywhere.</p>
         </div>
         <input id="reg-username" class="field" placeholder="Username">
+        <input id="reg-name" class="field" placeholder="Full name">
         <input id="reg-email" class="field" placeholder="Email">
         <input id="reg-password" class="field" type="password" placeholder="Password">
         <button id="btn-register" class="btn secondary">Sign up</button>
@@ -105,41 +106,59 @@
       <div class="panel">
         <div class="panel__head">
           <div>
-            <p class="eyebrow">New quest</p>
-            <h3>Add to your run</h3>
-          </div>
-          <span class="pill pill--subtle">+XP</span>
-        </div>
-
-        <input id="q-title" class="field" placeholder="Quest title">
-        <textarea id="q-desc" class="field field--area" placeholder="Description"></textarea>
-        <label class="field__label">Due date</label>
-        <input id="q-due" type="date" class="field">
-
-        <label class="field__label">Difficulty</label>
-        <select id="q-diff" class="field">
-          <option value="easy">Easy</option>
-          <option value="medium" selected>Medium</option>
-          <option value="hard">Hard</option>
-          <option value="epic">Epic</option>
-        </select>
-
-        <button id="btn-add" class="btn primary wide">Add quest</button>
-      </div>
-
-      <div class="panel aura-card">
-        <div class="panel__head">
-          <div>
             <p class="eyebrow">Quest board</p>
             <h3>Your quests</h3>
           </div>
-          <div class="panel__actions">
-            <span class="pill pill--subtle">Live</span>
-            <span class="pill">Earn / Fail</span>
-          </div>
+          <button id="open-add" class="btn primary">Add quest</button>
         </div>
+
         <div class="quest-list">
           <ul id="quest-list"></ul>
+        </div>
+      </div>
+
+    </section>
+    <section id="achievements-page" class="hidden dashboard-grid">
+      <div class="panel">
+        <div class="panel__head">
+          <div>
+            <p class="eyebrow">Progress</p>
+            <h3>Your achievements</h3>
+          </div>
+          <span class="pill">Milestones</span>
+        </div>
+        <ul id="achievements-list" class="achievements achievements--grid"></ul>
+      </div>
+    </section>
+
+    <!-- ===== PROFILE PAGE (logged-in) ===== -->
+    <section id="profile-page" class="hidden dashboard-grid">
+      <div class="panel profile-card">
+        <div class="profile-top">
+          <div class="avatar" id="profile-avatar"></div>
+          <div>
+            <h3 id="profile-name">Your name</h3>
+            <p id="profile-username" class="muted"></p>
+            <p id="profile-email" class="muted"></p>
+          </div>
+        </div>
+        <div class="profile-stats">
+          <div>
+            <p class="eyebrow">Level</p>
+            <div id="profile-level" class="stat-value"></div>
+          </div>
+          <div>
+            <p class="eyebrow">Total XP</p>
+            <div id="profile-xp" class="stat-value"></div>
+          </div>
+          <div>
+            <p class="eyebrow">Streak</p>
+            <div id="profile-streak" class="stat-value"></div>
+          </div>
+        </div>
+        <div class="profile-achievements">
+          <p class="eyebrow">Recent achievements</p>
+          <ul id="profile-ach-list" class="achievements achievements--grid"></ul>
         </div>
       </div>
     </section>
@@ -207,6 +226,8 @@
       <div class="navbar__actions">
         <button id="nav-dashboard" class="btn nav-btn requires-auth">🏠 Dashboard</button>
         <button id="nav-groups" class="btn nav-btn requires-auth">🏆 Groups</button>
+        <button id="nav-achievements" class="btn nav-btn requires-auth">🎖 Achievements</button>
+        <button id="nav-profile" class="btn nav-btn requires-auth">👤 Profile</button>
         <button id="btn-logout" class="btn danger nav-btn">🚪 Logout</button>
       </div>
     </div>
@@ -219,6 +240,42 @@
       <div class="modal-action">
         <button id="dm-cancel" class="btn">Cancel</button>
         <button id="dm-ok" class="btn bg-red-600 border-0 hover:bg-red-700">Delete</button>
+      </div>
+    </div>
+  </dialog>
+  <dialog id="add-quest-modal" class="modal">
+    <div class="modal-box bg-[#0f1824]">
+      <h3 class="font-bold text-lg text-[#4cc9ff]">Add quest</h3>
+  
+      <div class="space-y-2 mt-3">
+
+        <!-- Title input + autocomplete wrapper -->
+        <div class="relative">
+            <input id="q-title" class="field" placeholder="Quest title" autocomplete="off">
+      
+            <!-- SUGGESTIONS DROPDOWN -->
+            <ul id="template-suggestions" 
+    class="menu bg-base-200 rounded-box mt-1 hidden max-h-48 overflow-y-auto 
+           shadow-lg absolute z-50 w-full"></ul>
+        </div>
+      
+        <textarea id="q-desc" class="field field--area" placeholder="Description"></textarea>
+      
+        <label class="field__label">Due date</label>
+        <input id="q-due" type="date" class="field">
+      
+        <label class="field__label">Difficulty</label>
+        <select id="q-diff" class="field">
+          <option value="easy">Easy</option>
+          <option value="medium" selected>Medium</option>
+          <option value="hard">Hard</option>
+          <option value="epic">Epic</option>
+        </select>
+      </div>
+  
+      <div class="modal-action">
+        <button id="add-cancel" class="btn ghost">Cancel</button>
+        <button id="btn-add" class="btn primary">Add quest</button>
       </div>
     </div>
   </dialog>

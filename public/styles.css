@@ -53,7 +53,7 @@ html,body{height:100%;}
 
 .shell{
   position:relative; z-index:1;
-  max-width:1100px; margin:0 auto; padding:5.5rem 1.5rem 4rem; /* extra top padding so content clears navbar */
+  max-width:1100px; margin:0 auto; padding:6.5rem 1.5rem 4.5rem; /* extra spacing below navbar */
 }
 
 /* ===== Hero ===== */
@@ -198,7 +198,10 @@ html,body{height:100%;}
 .nav-btn{ font-size:0.95rem; padding:0.55rem 0.95rem; }
 
 /* ===== Stats ===== */
-.stats-panel{ display:grid; gap:0.75rem; }
+.stats-panel{
+  display:grid; gap:0.75rem;
+  width:100%; max-width:1040px; margin:0 auto 1.25rem;
+}
 .stats-panel__header{ display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
 .stats-panel__chips{ display:flex; gap:0.5rem; flex-wrap:wrap; }
 .xp-track{
@@ -218,12 +221,36 @@ html,body{height:100%;}
   display:flex; flex-wrap:wrap; gap:0.45rem;
 }
 .achievements .ach-date{ color:var(--muted); font-size:0.8rem; margin-left:6px; }
+.achievements--grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:0.6rem;
+}
+
+.profile-card{
+  display:flex; flex-direction:column; gap:1rem;
+}
+.profile-top{
+  display:flex; align-items:center; gap:1rem;
+}
+.avatar{
+  width:64px; height:64px; border-radius:50%;
+  background:linear-gradient(135deg, #7cf0ff, #7a5cff);
+  color:#05101a; display:flex; align-items:center; justify-content:center;
+  font-weight:800; font-size:1.2rem;
+}
+.profile-stats{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:1rem;
+}
+.profile-achievements{ margin-top:0.5rem; }
 
 /* ===== Dashboard ===== */
 .dashboard-grid{
-  display:grid; grid-template-columns:minmax(280px, 0.95fr) 1.2fr;
-  gap:1rem; align-items:start; margin-bottom:2rem;
+  display:flex; flex-direction:column; gap:1.25rem;
+  align-items:center; margin-bottom:2rem;
 }
+.dashboard-grid > .panel{ width:100%; max-width:1040px; }
 .quest-list{
   background:rgba(255,255,255,0.02);
   border-radius:12px;
@@ -262,7 +289,21 @@ html,body{height:100%;}
 .pill--penalty{ color:#ffd2d2; border-color:rgba(255,107,107,0.45); background:rgba(255,107,107,0.08); }
 .pill--diff{ text-transform:capitalize; border-color:rgba(124,240,255,0.3); }
 .pill--danger{ color:#ffd2d2; border-color:rgba(255,107,107,0.45); background:rgba(255,107,107,0.08); }
-.pill--link{ background:transparent; border-color:rgba(124,240,255,0.35); color:#e5fbff; cursor:pointer; }
+.pill--ghost{ background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.1); }
+
+.action-chip-row{ display:flex; gap:0.4rem; align-items:center; }
+.chip-btn{
+  padding:0.35rem 0.7rem;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.12);
+  background:rgba(124,240,255,0.12);
+  color:#e5fbff;
+  font-weight:700;
+  cursor:pointer;
+  transition:transform .12s ease, filter .12s ease;
+}
+.chip-btn:hover{ transform:translateY(-1px); filter:brightness(1.05); }
+.chip-btn.danger{ background:rgba(255,107,107,0.15); border-color:rgba(255,107,107,0.35); color:#ffe2e2; }
 
 .badge{
   padding:.18rem .6rem; border-radius:999px; font-size:.82rem; font-weight:700;

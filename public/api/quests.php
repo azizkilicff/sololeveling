@@ -27,18 +27,62 @@ try {
     $due   = (string)($input['due_date'] ?? date('Y-m-d'));
     $difficulty = strtolower(trim((string)($input['difficulty'] ?? 'medium')));
 
-    if ($title === '') { http_response_code(400); echo json_encode(['error'=>'Title required']); exit; }
+    if ($title === '') {
+        http_response_code(400);
+        echo json_encode(['error' => 'Title required']);
+        exit;
+    }
 
-    // Server-side difficulty mapping (authoritative)
+    // --- 1) Check if template already exists ---
+    $stmt = $pdo->prepare("SELECT * FROM quest_templates WHERE title = ?");
+    $stmt->execute([$title]);
+    $tmpl = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // --- 2) If template missing → auto-create it ---
+    if (!$tmpl) {
+        $insert = $pdo->prepare("
+            INSERT INTO quest_templates (title, description, default_reward_xp, default_penalty_xp)
+            VALUES (?, ?, 10, 5)
+        ");
+        $insert->execute([$title, $desc]);
+        $template_id = (int)$pdo->lastInsertId();
+    } else {
+        $template_id = (int)$tmpl['id'];
+    }
+
+    // --- 3) Load template XP for quest creation ---
+    $stmt2 = $pdo->prepare("SELECT * FROM quest_templates WHERE id = ?");
+    $stmt2->execute([$template_id]);
+    $t = $stmt2->fetch(PDO::FETCH_ASSOC);
+
+    $reward = (int)$t['default_reward_xp'];
+    $penalty = (int)$t['default_penalty_xp'];
+
+    // Server override: if difficulty is selected manually
     $rewardMap  = ['easy'=>10, 'medium'=>20, 'hard'=>35, 'epic'=>60];
-    $reward     = $rewardMap[$difficulty] ?? 20;
-    $penalty    = (int)round($reward * 0.5);
+    if (isset($rewardMap[$difficulty])) {
+        $reward  = $rewardMap[$difficulty];
+        $penalty = (int)round($reward * 0.5);
+    }
 
-    $stmt = $pdo->prepare('INSERT INTO quests (user_id, title, description, due_date, reward_xp, penalty_xp, status) VALUES (?,?,?,?,?,?, "pending")');
-    $stmt->execute([$user_id, $title, $desc, $due, $reward, $penalty]);
-    echo json_encode(['ok'=>true]);
+    // --- 4) Insert quest tied to template ---
+    $stmt3 = $pdo->prepare("
+        INSERT INTO quests (user_id, template_id, title, description, due_date, reward_xp, penalty_xp, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
+    ");
+    $stmt3->execute([
+        $user_id,
+        $template_id,
+        $title,
+        $desc,
+        $due,
+        $reward,
+        $penalty
+    ]);
+
+    echo json_encode(['ok' => true]);
     exit;
-  }
+}
 
   if ($method === 'PUT') {
     $id = (int)($input['id'] ?? 0);
