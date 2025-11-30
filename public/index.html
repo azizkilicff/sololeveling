@@ -22,13 +22,36 @@
   <div class="grid-overlay"></div>
 
   <main class="shell">
-    <header class="hero">
-      <h1>Forge habits like a hunter.</h1>
-      <p class="hero__lede">Track quests, earn XP, and move through your day with party-grade dashboards and a clean, focused flow.</p>
-      <div class="hero__tags">
-        <span class="pill">Live XP bar</span>
-        <span class="pill">Quest board</span>
-        <span class="pill">Groups + leaderboards</span>
+    <header id="hero-section" class="hero">
+      <div class="hero__badge">Solo Leveling • Habit Quests</div>
+      <h1><span class="gradient-text">Level Up</span> Your Life</h1>
+      <p class="hero__lede">Complete quests, build better habits, and become the strongest version of yourself.</p>
+      <div class="hero__features">
+        <div class="feature-card">
+          <span class="icon">⚡</span>
+          <div>
+            <div class="feature-title">Daily XP</div>
+            <div class="feature-sub">Earn rewards</div>
+          </div>
+        </div>
+        <div class="feature-card">
+          <span class="icon">📈</span>
+          <div>
+            <div class="feature-title">Level Up</div>
+            <div class="feature-sub">Track progress</div>
+          </div>
+        </div>
+        <div class="feature-card">
+          <span class="icon">🎯</span>
+          <div>
+            <div class="feature-title">Quests</div>
+            <div class="feature-sub">Complete goals</div>
+          </div>
+        </div>
+      </div>
+      <div class="hero__cta">
+        <button id="hero-start" class="btn primary hero-btn">Start your journey ⚡</button>
+        <button id="hero-login" class="btn ghost hero-btn">Already have an account? Sign in</button>
       </div>
     </header>
 
@@ -52,28 +75,28 @@
     </section>
 
     <!-- ===== AUTH ===== -->
-    <section id="auth" class="auth-grid">
-      <div class="panel auth-card">
+    <section id="auth" class="auth-grid auth-stack">
+      <div class="panel auth-card" id="login-card">
         <div class="auth-card__head">
-          <p class="eyebrow">Welcome back</p>
-          <h2>Enter the gate</h2>
-          <p class="muted">Jump straight into your quest board.</p>
+          <p class="eyebrow">Sign in</p>
+          <h2>Welcome back</h2>
+          <p class="muted">Access your quests, XP, streaks, and groups with a secure sign in.</p>
         </div>
         <input id="login-username" class="field" placeholder="Username">
         <input id="login-password" class="field" type="password" placeholder="Password">
-        <button id="btn-login" class="btn primary">Log in</button>
+        <button id="btn-login" class="btn primary">Sign in</button>
       </div>
 
-      <div class="panel auth-card accent">
+      <div class="panel auth-card accent hidden" id="signup-card">
         <div class="auth-card__head">
-          <p class="eyebrow">New hunter</p>
-          <h2>Awaken</h2>
-          <p class="muted">Create an account and start earning XP.</p>
+          <p class="eyebrow">Create account</p>
+          <h2>Join Solo Leveling</h2>
+          <p class="muted">Register once, sync quests everywhere.</p>
         </div>
         <input id="reg-username" class="field" placeholder="Username">
         <input id="reg-email" class="field" placeholder="Email">
         <input id="reg-password" class="field" type="password" placeholder="Password">
-        <button id="btn-register" class="btn secondary">Register</button>
+        <button id="btn-register" class="btn secondary">Sign up</button>
       </div>
     </section>
 
@@ -175,7 +198,7 @@
   </main>
 
   <!-- ===== NAVBAR (hidden until logged in) ===== -->
-  <nav id="navbar" class="navbar">
+  <nav id="navbar" class="navbar hidden">
     <div class="navbar__inner">
       <div class="navbar__brand">
         <div class="logo-dot"></div>

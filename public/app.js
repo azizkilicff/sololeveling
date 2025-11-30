@@ -30,6 +30,13 @@ const loginPass   = $("login-password");
 const regUser     = $("reg-username");
 const regEmail    = $("reg-email");
 const regPass     = $("reg-password");
+const loginCard   = $("login-card");
+const signupCard  = $("signup-card");
+const showSignup  = $("show-signup");
+const showLogin   = $("show-login");
+const heroStart   = $("hero-start");
+const heroLogin   = $("hero-login");
+const heroSection = $("hero-section");
 
 // Groups page
 const groupsPage      = $("groups-page");
@@ -76,25 +83,34 @@ function setAuthUI(isAuthed) {
 
 function showAuth() {
   auth.classList.remove("hidden");
+  heroSection?.classList.remove("hidden");
   statsWrap.classList.add("hidden");
   dash.classList.add("hidden");
   groupsPage.classList.add("hidden");
+  document.body.classList.add("auth-mode");
+  navbar?.classList.add("hidden");
   setAuthUI(false); // hides Dashboard/Groups buttons
 }
 
 function showDashboard() {
   auth.classList.add("hidden");
+  heroSection?.classList.add("hidden");
   statsWrap.classList.remove("hidden");
   dash.classList.remove("hidden");
   groupsPage.classList.add("hidden");
+  document.body.classList.remove("auth-mode");
+  navbar?.classList.remove("hidden");
   setAuthUI(true);  // show Dashboard/Groups buttons
 }
 
 function showGroups() {
   auth.classList.add("hidden");
+  heroSection?.classList.add("hidden");
   statsWrap.classList.remove("hidden");
   dash.classList.add("hidden");
   groupsPage.classList.remove("hidden");
+  document.body.classList.remove("auth-mode");
+  navbar?.classList.remove("hidden");
   setAuthUI(true);  // show Dashboard/Groups buttons
 }
 
@@ -428,6 +444,28 @@ navGroupsBtn?.addEventListener("click", async () => { showGroups(); await loadGr
 // Groups actions
 btnCreateGroup?.addEventListener("click", createGroup);
 btnJoinByName?.addEventListener("click", () => joinGroupByName());
+
+// Auth toggle
+showSignup?.addEventListener("click", (e) => {
+  e.preventDefault();
+  loginCard?.classList.add("hidden");
+  signupCard?.classList.remove("hidden");
+});
+showLogin?.addEventListener("click", (e) => {
+  e.preventDefault();
+  signupCard?.classList.add("hidden");
+  loginCard?.classList.remove("hidden");
+});
+heroStart?.addEventListener("click", (e) => {
+  e.preventDefault();
+  loginCard?.classList.add("hidden");
+  signupCard?.classList.remove("hidden");
+});
+heroLogin?.addEventListener("click", (e) => {
+  e.preventDefault();
+  signupCard?.classList.add("hidden");
+  loginCard?.classList.remove("hidden");
+});
 
 // ===== Boot: start on Auth; refresh session if exists =====
 document.addEventListener("DOMContentLoaded", () => {
