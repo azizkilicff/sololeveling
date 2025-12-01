@@ -6,8 +6,48 @@ declare(strict_types=1);
  * NO DDL inside helper functions, safe to use inside complete.php transaction.
  */
 
+// Leveling curve: base cap 30 XP, grows by 18% per level.
+function level_details(int $xp): array {
+    $base = 30;
+    $growth = 1.18;
+    $level = 1;
+    $cap = $base;
+    $xpRemaining = max(0, $xp);
+
+    while ($xpRemaining >= $cap) {
+        $xpRemaining -= $cap;
+        $level++;
+        $cap = (int)round($cap * $growth);
+    }
+
+    return ['level' => $level, 'xp_in_level' => $xpRemaining, 'xp_cap' => $cap];
+}
+
 function level_from_xp(int $xp): int {
-    return max(1, (int)floor(sqrt(max(0, $xp) / 50)) + 1);
+    return level_details($xp)['level'];
+}
+
+function sync_level_achievements(PDO $pdo, int $userId, int $level): array {
+    $codes = [];
+    if ($level >= 5)  $codes[] = 'level_5';
+    if ($level >= 10) $codes[] = 'level_10';
+    $newlyEarned = [];
+    foreach ($codes as $code) {
+        $stmt = $pdo->prepare("INSERT IGNORE INTO user_achievements (user_id, code) VALUES (?, ?)");
+        $stmt->execute([$userId, $code]);
+        if ($stmt->rowCount() > 0) $newlyEarned[] = $code;
+    }
+    return $newlyEarned;
+}
+
+function achievement_catalog(): array {
+    return [
+        'first_quest' => ['title' => 'First Quest', 'desc' => 'Complete your first quest.'],
+        'streak_3'    => ['title' => '3-Day Streak', 'desc' => 'Complete a quest three days in a row.'],
+        'streak_7'    => ['title' => '7-Day Streak', 'desc' => 'Complete a quest seven days in a row.'],
+        'level_5'     => ['title' => 'Level 5', 'desc' => 'Reach level 5.'],
+        'level_10'    => ['title' => 'Level 10', 'desc' => 'Reach level 10.']
+    ];
 }
 
 function ensure_progress_tables(PDO $pdo): void {

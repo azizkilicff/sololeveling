@@ -5,15 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Solo Leveling — Habit Quests</title>
 
-  <!-- UI libs (keep Daisy for dialog styling) -->
+  <!-- UI libs (Daisy + Tailwind) -->
   <link href="https://cdn.jsdelivr.net/npm/daisyui@3.1.7/dist/full.css" rel="stylesheet" type="text/css" />
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-  <!-- Custom theme -->
-  <link rel="stylesheet" href="/styles.css" />
+  <!-- Favicon (NO leading slash) -->
+  <link rel="icon" type="image/png" href="favicon.png" />
+
+  <!-- Custom CSS (NO leading slash) -->
+  <link rel="stylesheet" href="styles.css" />
 </head>
 
 <body class="page">
@@ -64,14 +69,12 @@
         </div>
         <div class="stats-panel__chips">
           <span id="streak-pill" class="pill">Streak: 0 days</span>
-          <span id="achievements-pill" class="pill pill--subtle">Achievements: 0</span>
         </div>
       </div>
       <div class="xp-track">
         <div id="xp-fill" class="xp-fill"></div>
       </div>
       <div id="xp-text" class="xp-caption">0 / 100 XP</div>
-      <ul id="achievement-list" class="achievements"></ul>
     </section>
 
     <!-- ===== AUTH ===== -->
@@ -284,26 +287,24 @@
     </div>
   </dialog>
   <dialog id="add-quest-modal" class="modal">
-    <div class="modal-box bg-[#0f1824]">
+    <div class="modal-box bg-[rgba(24,34,56,0.96)] border border-[rgba(255,255,255,0.18)] shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
       <h3 class="font-bold text-lg text-[#4cc9ff]">Add quest</h3>
   
       <div class="space-y-2 mt-3">
-
+  
         <!-- Title input + autocomplete wrapper -->
         <div class="relative">
-            <input id="q-title" class="field" placeholder="Quest title" autocomplete="off">
-      
-            <!-- SUGGESTIONS DROPDOWN -->
-            <ul id="template-suggestions" 
-    class="menu bg-base-200 rounded-box mt-1 hidden max-h-48 overflow-y-auto 
-           shadow-lg absolute z-50 w-full"></ul>
+          <input id="q-title" class="field" placeholder="Quest title" autocomplete="off">
+          <ul id="template-suggestions"
+              class="menu bg-base-200 rounded-box mt-1 hidden max-h-48 overflow-y-auto
+                     shadow-lg absolute z-50 w-full"></ul>
         </div>
-      
+  
         <textarea id="q-desc" class="field field--area" placeholder="Description"></textarea>
-      
+  
         <label class="field__label">Due date</label>
         <input id="q-due" type="date" class="field">
-      
+  
         <label class="field__label">Difficulty</label>
         <select id="q-diff" class="field">
           <option value="easy">Easy</option>
@@ -311,6 +312,15 @@
           <option value="hard">Hard</option>
           <option value="epic">Epic</option>
         </select>
+  
+        <!-- ⭐ NEW: Repeat Mode -->
+        <label class="field__label">Repeat</label>
+        <select id="q-repeat" class="field">
+          <option value="none" selected>One-time</option>
+          <option value="daily">Daily (repeats every day)</option>
+          <option value="weekly">Weekly (repeats every week)</option>
+        </select>
+  
       </div>
   
       <div class="modal-action">
@@ -319,6 +329,55 @@
       </div>
     </div>
   </dialog>
-  <script src="/app.js"></script>
+  <dialog id="member-modal" class="modal">
+    <div class="modal-box bg-[rgba(24,34,56,0.96)] border border-[rgba(255,255,255,0.18)] shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+      <h3 class="font-bold text-lg text-[#4cc9ff]">Member</h3>
+      <p class="py-2 opacity-80" id="member-username">Username</p>
+      <div id="member-details" class="hidden text-sm space-y-1">
+        <div>Level: <span id="member-level"></span></div>
+        <div>XP: <span id="member-xp"></span></div>
+        <div>Streak: <span id="member-streak"></span></div>
+        <div>Email: <span id="member-email"></span></div>
+      </div>
+      <div class="modal-action">
+        <button id="mm-view" class="btn">View profile</button>
+        <button id="mm-kick" class="btn danger hidden">Remove from group</button>
+        <button id="mm-close" class="btn ghost">Close</button>
+      </div>
+    </div>
+  </dialog>
+  <div id="member-pop" class="member-pop hidden">
+    <div class="member-pop-inner">
+      <div class="member-pop-name" id="mp-name">Member</div>
+      <div class="member-pop-sub" id="mp-username">@user</div>
+      <div class="member-pop-sub" id="mp-email"></div>
+      <div class="member-pop-stats">
+        <span id="mp-level">Lv 1</span>
+        <span id="mp-xp">0 XP</span>
+        <span id="mp-streak">0 day streak</span>
+      </div>
+      <div class="member-pop-actions">
+        <button id="mp-close" class="chip-btn mini">Close</button>
+        <button id="mp-kick" class="chip-btn mini danger hidden">Remove</button>
+      </div>
+    </div>
+  </div>
+  <dialog id="quest-detail-modal" class="modal">
+    <div class="modal-box bg-[rgba(24,34,56,0.96)] border border-[rgba(255,255,255,0.18)] shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+      <h3 class="font-bold text-lg text-[#4cc9ff]" id="qd-title">Quest</h3>
+      <p class="opacity-80" id="qd-desc"></p>
+      <div class="mt-3 text-sm space-y-1">
+        <div>Due: <span id="qd-due"></span></div>
+        <div>Difficulty: <span id="qd-diff"></span></div>
+        <div>Reward: <span id="qd-reward"></span></div>
+        <div>Penalty: <span id="qd-penalty"></span></div>
+        <div>Repeat: <span id="qd-repeat"></span></div>
+      </div>
+      <div class="modal-action">
+        <button id="qd-close" class="btn ghost">Close</button>
+      </div>
+    </div>
+  </dialog>
+  <script src="app.js"></script>
 </body>
 </html>

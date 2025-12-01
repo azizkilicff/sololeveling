@@ -13,11 +13,10 @@ const stats       = $("player-stats");
 const xpFill      = $("xp-fill");
 const xpText      = $("xp-text");
 const streakPill  = $("streak-pill");
-const achPill     = $("achievements-pill");
-const achList     = $("achievement-list");
 const addModal    = $("add-quest-modal");
 const addCancel   = $("add-cancel");
 const openAddBtn  = $("open-add");
+const addModalTitle = document.querySelector("#add-quest-modal h3");
 
 const questList   = $("quest-list");
 const qTitle      = $("q-title");
@@ -54,6 +53,26 @@ const profileStreak = $("profile-streak");
 const profileAchList = $("profile-ach-list");
 const profileAvatar = $("profile-avatar");
 const navProfileBtn = $("nav-profile");
+const memberModal = $("member-modal");
+const memberUsername = $("member-username");
+const memberKickBtn = $("mm-kick");
+const memberViewBtn = $("mm-view");
+const memberCloseBtn = $("mm-close");
+const memberDetails = $("member-details");
+const memberLevel = $("member-level");
+const memberXp = $("member-xp");
+const memberStreak = $("member-streak");
+const memberEmail = $("member-email");
+const questDetailModal = $("quest-detail-modal");
+const qdTitle = $("qd-title");
+const qdDesc = $("qd-desc");
+const qdDue = $("qd-due");
+const qdDiff = $("qd-diff");
+const qdReward = $("qd-reward");
+const qdPenalty = $("qd-penalty");
+const qdRepeat = $("qd-repeat");
+const qdTags = $("qd-tags");
+const qdClose = $("qd-close");
 
 // Groups page
 const groupsPage      = $("groups-page");
@@ -77,7 +96,7 @@ async function api(path, method = "GET", data) {
   const opts = { method, headers: { "Content-Type": "application/json" } };
   if (data) opts.body = JSON.stringify(data);
 
-  const res = await fetch("/" + path, opts);
+  const res = await fetch(path, opts);
   let text = "", payload = null;
   try { text = await res.text(); payload = text ? JSON.parse(text) : null; } catch {}
   if (!res.ok) throw new Error((payload && payload.error) || text || `HTTP ${res.status}`);
@@ -85,8 +104,18 @@ async function api(path, method = "GET", data) {
 }
 
 // ===== UI helpers =====
-function computeLevel(xp) {
-  return Math.max(1, Math.floor(Math.sqrt(Math.max(0, xp) / 50)) + 1);
+function computeLevelDetails(totalXp) {
+  const base = 30;
+  const growth = 1.18;
+  let level = 1;
+  let cap = base;
+  let xpRemaining = Math.max(0, totalXp);
+  while (xpRemaining >= cap) {
+    xpRemaining -= cap;
+    level += 1;
+    cap = Math.round(cap * growth);
+  }
+  return { level, xpInLevel: xpRemaining, cap };
 }
 
 function setAuthUI(isAuthed) {
@@ -165,6 +194,9 @@ function showProfile() {
 let CURRENT_USER_ID = null;
 let LAST_ACHIEVEMENTS = [];
 let LAST_USER = null;
+let ACHIEVEMENT_CATALOG = {};
+let LAST_ACHIEVEMENTS_UNLOCKED = [];
+let editingQuestId = null;
 
 async function refreshMe() {
   try {
@@ -172,19 +204,24 @@ async function refreshMe() {
     CURRENT_USER_ID = user.id;
 
     const xp = user.xp || 0;
-    const level = user.level ?? computeLevel(xp);
-    const xpInLevel = xp % 100;
+    const details = (user.xp_cap !== undefined)
+      ? { level: user.level, xpInLevel: user.xp_in_level, cap: user.xp_cap }
+      : computeLevelDetails(xp);
+    const level = details.level;
+    const xpInLevel = details.xpInLevel;
+    const cap = details.cap;
     const streak = user.streak || 0;
     const achievements = user.achievements || [];
+    ACHIEVEMENT_CATALOG = user.achievement_catalog || ACHIEVEMENT_CATALOG;
+    LAST_ACHIEVEMENTS_UNLOCKED = achievements;
     LAST_ACHIEVEMENTS = achievements;
     LAST_USER = user;
 
     stats.textContent = `Level ${level} • Total XP ${xp}`;
-    if (xpFill) xpFill.style.width = `${xpInLevel}%`;
-    if (xpText) xpText.textContent = `${xpInLevel} / 100 XP for this level`;
+    const pct = cap ? Math.min(100, Math.round((xpInLevel / cap) * 100)) : 0;
+    if (xpFill) xpFill.style.width = `${pct}%`;
+    if (xpText) xpText.textContent = `${xpInLevel} / ${cap} XP for this level`;
     if (streakPill) streakPill.textContent = `Streak: ${streak} day${streak === 1 ? "" : "s"}`;
-    if (achPill) achPill.textContent = `Achievements: ${achievements.length}`;
-    if (achList) achList.innerHTML = renderAchievementsList(achievements);
     renderAchievements();
 
     showDashboard();
@@ -205,7 +242,8 @@ async function loadQuests() {
 
   quests.forEach(q => {
     const li = document.createElement("li");
-    const diffClass = q.difficulty ? `diff-${q.difficulty}` : "diff-medium";
+    const diff = resolveDifficulty(q);
+    const diffClass = `diff-${diff}`;
     const dueDate = new Date(`${q.due_date}T23:59:59`);
     const isOverdue = q.status === "pending" && (dueDate < new Date());
 
@@ -220,7 +258,13 @@ async function loadQuests() {
         </span>
         <span class="pill pill--mini pill--reward">+${q.reward_xp} XP</span>
         <span class="pill pill--mini pill--penalty">-${q.penalty_xp} XP</span>
-        <span class="pill pill--mini pill--diff">${q.difficulty || "medium"}</span>
+        <span class="pill pill--mini pill--diff diff-${diff}">${diff.charAt(0).toUpperCase() + diff.slice(1)}</span>
+        ${
+          q.tags
+            ? q.tags.split(",").map(t => t.trim()).filter(Boolean).map(tag =>
+                `<span class="pill pill--mini pill--ghost">${tag}</span>`).join("")
+            : ""
+        }
       </div>`;
 
     const right = document.createElement("div");
@@ -236,20 +280,29 @@ async function loadQuests() {
     chip.textContent = q.status;
     right.appendChild(chip);
 
+    li.addEventListener("click", () => openQuestDetail(q));
+
     if (q.status === "pending") {
       const b1 = document.createElement("button");
       b1.className = "btn";
       b1.textContent = "Complete";
-      b1.onclick = () => finish(q, "complete");
+      b1.onclick = (e) => { e.stopPropagation(); finish(q, "complete"); };
 
       const b2 = document.createElement("button");
       b2.className = "btn btn-ghost";
       b2.textContent = "Fail";
       b2.style.marginLeft = ".5rem";
-      b2.onclick = () => finish(q, "fail");
+      b2.onclick = (e) => { e.stopPropagation(); finish(q, "fail"); };
+
+      const b3 = document.createElement("button");
+      b3.className = "btn btn-ghost";
+      b3.textContent = "Edit";
+      b3.style.marginLeft = ".5rem";
+      b3.onclick = (e) => { e.stopPropagation(); openEditQuest(q); };
 
       right.appendChild(b1);
       right.appendChild(b2);
+      right.appendChild(b3);
     }
 
     li.appendChild(left);
@@ -286,11 +339,32 @@ function prettyAchievement(code) {
   return map[code] || code;
 }
 
+function openEditQuest(q) {
+  editingQuestId = q.id;
+  if (addModalTitle) addModalTitle.textContent = "Edit quest";
+  if (btnAdd) btnAdd.textContent = "Save changes";
+  if (qTitle) qTitle.value = q.title || "";
+  if (qDesc) qDesc.value = q.description || "";
+  if (qDue) qDue.value = q.due_date || "";
+  if (qDiff) qDiff.value = resolveDifficulty(q);
+  addModal?.showModal();
+}
+
 function renderAchievementsList(achievements) {
-  if (!achievements || !achievements.length) {
+  if (!ACHIEVEMENT_CATALOG || !Object.keys(ACHIEVEMENT_CATALOG).length) {
     return '<li class="muted">No achievements yet. Finish quests to start earning.</li>';
   }
-  return achievements.map(a => `<li class="pill pill--mini">${prettyAchievement(a.code)} <span class="ach-date">${(a.earned_at || "").slice(0,10)}</span></li>`).join("");
+  const earnedCodes = new Set((achievements || []).map(a => a.code));
+  const catalogEntries = Object.entries(ACHIEVEMENT_CATALOG);
+  return catalogEntries.map(([code, meta]) => {
+    const isEarned = earnedCodes.has(code);
+    const earnedAt = (achievements || []).find(a => a.code === code)?.earned_at;
+    return `<li class="achievement-card ${isEarned ? "" : "locked"}">
+      <div class="ach-title">${meta.title}</div>
+      <div class="ach-desc">${meta.desc}</div>
+      <div class="ach-status">${isEarned ? `Unlocked ${earnedAt ? earnedAt.slice(0,10) : ""}` : "Locked"}</div>
+    </li>`;
+  }).join("");
 }
 
 function renderAchievements() {
@@ -299,20 +373,83 @@ function renderAchievements() {
   }
 }
 
+function resolveDifficulty(q) {
+  const raw = (q.difficulty || "").toLowerCase();
+  if (["easy", "medium", "hard", "epic"].includes(raw)) return raw;
+  const rxp = q.reward_xp || 0;
+  if (rxp <= 15) return "easy";
+  if (rxp <= 25) return "medium";
+  if (rxp <= 45) return "hard";
+  return "epic";
+}
+
+function openQuestDetail(q) {
+  if (!questDetailModal) return;
+  const diff = resolveDifficulty(q);
+  if (qdTitle) qdTitle.textContent = q.title || "Quest";
+  if (qdDesc) qdDesc.textContent = q.description || "No description provided.";
+  if (qdDue) qdDue.textContent = q.due_date || "N/A";
+  if (qdDiff) qdDiff.textContent = diff.charAt(0).toUpperCase() + diff.slice(1);
+  if (qdReward) qdReward.textContent = `${q.reward_xp || 0} XP`;
+  if (qdPenalty) qdPenalty.textContent = `${q.penalty_xp || 0} XP`;
+  if (qdRepeat) qdRepeat.textContent = q.repeat_mode || "one-time";
+  questDetailModal.showModal();
+}
+
+function renderShortAchievements(achievements) {
+  if (!achievements || !achievements.length) return '<li class="muted">No achievements yet.</li>';
+  const unlocked = achievements.slice(0, 3);
+  return unlocked.map(a => `<li class="pill pill--mini">${prettyAchievement(a.code)}</li>`).join("");
+}
+
 function renderProfile() {
   if (!LAST_USER || !profilePage) return;
   profileName.textContent = LAST_USER.name || LAST_USER.username;
   profileUsername.textContent = `@${LAST_USER.username}`;
   profileEmail.textContent = LAST_USER.email || "";
-  profileLevel.textContent = LAST_USER.level ?? computeLevel(LAST_USER.xp || 0);
+  const d = (LAST_USER.xp_cap !== undefined)
+    ? { level: LAST_USER.level, xpInLevel: LAST_USER.xp_in_level, cap: LAST_USER.xp_cap }
+    : computeLevelDetails(LAST_USER.xp || 0);
+  profileLevel.textContent = d.level;
   profileXp.textContent = LAST_USER.xp || 0;
   profileStreak.textContent = `${LAST_USER.streak || 0} day${(LAST_USER.streak||0) === 1 ? "" : "s"}`;
-  if (profileAchList) profileAchList.innerHTML = renderAchievementsList(LAST_ACHIEVEMENTS);
+  if (profileAchList) profileAchList.innerHTML = renderShortAchievements(LAST_ACHIEVEMENTS_UNLOCKED);
 
   if (profileAvatar && LAST_USER.username) {
     const initials = (LAST_USER.name || LAST_USER.username).split(" ").map(s => s[0] || "").join("").slice(0,2).toUpperCase();
     profileAvatar.textContent = initials;
   }
+}
+
+async function openMemberModal(groupId, userId, ownerId, username) {
+  const isOwner = ownerId === CURRENT_USER_ID;
+  if (!memberModal) return;
+  try {
+    const { user } = await api(`api/user.php?id=${userId}`);
+    memberUsername.textContent = user.name || user.username;
+    memberUsername.dataset.profile = user.username;
+    const d = (user.xp_cap !== undefined)
+      ? { level: user.level, xpInLevel: user.xp_in_level, cap: user.xp_cap }
+      : computeLevelDetails(user.xp || 0);
+    if (memberLevel) memberLevel.textContent = d.level;
+    if (memberXp) memberXp.textContent = user.xp || 0;
+    if (memberStreak) memberStreak.textContent = `${user.streak || 0} day streak`;
+    if (memberEmail) memberEmail.textContent = user.email || "";
+  } catch {
+    memberUsername.textContent = username || "Member";
+    memberUsername.dataset.profile = "";
+    if (memberLevel) memberLevel.textContent = "";
+    if (memberXp) memberXp.textContent = "";
+    if (memberStreak) memberStreak.textContent = "";
+    if (memberEmail) memberEmail.textContent = "";
+  }
+  if (memberKickBtn) {
+    memberKickBtn.dataset.gid = groupId;
+    memberKickBtn.dataset.uid = userId;
+    memberKickBtn.classList.toggle("hidden", !isOwner || userId === CURRENT_USER_ID);
+  }
+  if (memberDetails) memberDetails.classList.add("hidden");
+  memberModal.showModal();
 }
 
 // ===== Groups =====
@@ -464,27 +601,20 @@ async function loadLeaderboard(groupId) {
   const data = await api(`api/groups.php?action=leaderboard&group_id=${groupId}`);
   const leaders = data.leaders || [];
   const ownerId = data.owner_user_id;
-  const isOwner = ownerId === CURRENT_USER_ID;
   if (!leaders || !leaders.length) {
     lbWrap.innerHTML = "No members yet.";
     return;
   }
   lbWrap.innerHTML = leaders.map((u, i) =>
     `<div class="flex justify-between items-center p-2">
-       <span>#${i+1} ${u.username}</span>
-       <span class="flex items-center gap-2">
-         <span>${u.xp} XP</span>
-         ${
-           (isOwner && u.user_id !== CURRENT_USER_ID)
-             ? `<button class="chip-btn mini danger" data-kick-member="${groupId}:${u.user_id}">Kick</button>`
-             : ""
-         }
-       </span>
+       <button class="member-link" data-member="${groupId}:${u.user_id}:${ownerId}">#${i+1} ${u.username}</button>
+       <span>${u.xp} XP</span>
      </div>`).join("");
 
-  lbWrap.querySelectorAll("[data-kick-member]").forEach(b => {
-    const [gid, uid] = b.dataset.kickMember.split(":").map(Number);
-    b.addEventListener("click", () => kickMember(gid, uid));
+  lbWrap.querySelectorAll(".member-link").forEach(b => {
+    const [gid, uid, oid] = b.dataset.member.split(":").map(Number);
+    const username = b.textContent?.replace(/#\d+\s*/, "") || "";
+    b.addEventListener("click", () => openMemberModal(gid, uid, oid, username));
   });
 }
 
@@ -632,6 +762,35 @@ function onScroll() {
 }
 window.addEventListener("scroll", onScroll, { passive: true });
 
+// ===== NEW CREATE QUEST (supports repeat) =====
+async function createQuest() {
+  const title  = qTitle.value.trim();
+  const desc   = qDesc.value.trim();
+  const due    = qDue.value || new Date().toISOString().slice(0,10);
+  const diff   = qDiff.value;
+  const repeat = $("q-repeat")?.value || "none";
+
+  if (!title) {
+    alert("Title required");
+    return;
+  }
+
+  await api("api/quests.php", "POST", {
+    title,
+    description: desc,
+    due_date: due,
+    difficulty: diff,
+    repeat_mode: repeat
+  });
+
+  qTitle.value = "";
+  qDesc.value = "";
+  qDiff.value = "medium";
+  $("q-repeat").value = "none";
+
+  addModal.close();
+  await loadQuests();
+}
 // ===== Events =====
 // Auth
 btnLogin?.addEventListener("click", async () => {
@@ -665,14 +824,31 @@ btnLogout?.addEventListener("click", async () => {
 
 // Quests (difficulty only; no custom XP)
 const qDiff = document.getElementById('q-diff');
+async function createQuest() {
+  await api("api/quests.php", "POST", {
+    title:       (qTitle.value || "").trim(),
+    description: (qDesc.value || "").trim(),
+    due_date:    qDue.value || new Date().toISOString().slice(0,10),
+    difficulty:  (qDiff?.value || "medium")
+  });
+}
+
 btnAdd?.addEventListener("click", async () => {
   try {
-    await api("api/quests.php", "POST", {
-      title:       (qTitle.value || "").trim(),
-      description: (qDesc.value || "").trim(),
-      due_date:    qDue.value || new Date().toISOString().slice(0,10),
-      difficulty:  (qDiff?.value || "medium")
-    });
+    if (editingQuestId) {
+      await api("api/quests.php", "PUT", {
+        id: editingQuestId,
+        title:       (qTitle.value || "").trim(),
+        description: (qDesc.value || "").trim(),
+        due_date:    qDue.value || new Date().toISOString().slice(0,10),
+        difficulty:  (qDiff?.value || "medium")
+      });
+      editingQuestId = null;
+      if (addModalTitle) addModalTitle.textContent = "Add quest";
+      if (btnAdd) btnAdd.textContent = "Add quest";
+    } else {
+      await createQuest();
+    }
     qTitle.value = ""; qDesc.value = "";
     if (qDiff) qDiff.value = "medium";
     await loadQuests();
@@ -680,6 +856,7 @@ btnAdd?.addEventListener("click", async () => {
     alert(e.message);
   }
 });
+
 
 // Navbar + groups
 navDashBtn?.addEventListener("click", showDashboard);
@@ -690,6 +867,18 @@ navProfileBtn?.addEventListener("click", () => {
   showProfile();
   renderProfile();
 });
+memberCloseBtn?.addEventListener("click", () => memberModal?.close());
+memberViewBtn?.addEventListener("click", () => {
+  memberDetails?.classList.toggle("hidden");
+});
+memberKickBtn?.addEventListener("click", async () => {
+  const gid = parseInt(memberKickBtn.dataset.gid || "0", 10);
+  const uid = parseInt(memberKickBtn.dataset.uid || "0", 10);
+  if (!gid || !uid) return;
+  await kickMember(gid, uid);
+  memberModal?.close();
+});
+qdClose?.addEventListener("click", () => questDetailModal?.close());
 
 // Groups actions
 btnCreateGroup?.addEventListener("click", createGroup);
@@ -718,8 +907,22 @@ heroLogin?.addEventListener("click", (e) => {
 });
 
 // Add quest modal
-openAddBtn?.addEventListener("click", () => addModal?.showModal());
-addCancel?.addEventListener("click", () => addModal?.close());
+openAddBtn?.addEventListener("click", () => {
+  editingQuestId = null;
+  if (addModalTitle) addModalTitle.textContent = "Add quest";
+  if (btnAdd) btnAdd.textContent = "Add quest";
+  if (qTitle) qTitle.value = "";
+  if (qDesc) qDesc.value = "";
+  if (qDue) qDue.value = "";
+  if (qDiff) qDiff.value = "medium";
+  addModal?.showModal();
+});
+addCancel?.addEventListener("click", () => {
+  editingQuestId = null;
+  if (addModalTitle) addModalTitle.textContent = "Add quest";
+  if (btnAdd) btnAdd.textContent = "Add quest";
+  addModal?.close();
+});
 btnAdd?.addEventListener("click", () => addModal?.close());
 
  // ===== AUTOCOMPLETE FOR QUEST TEMPLATES =====
