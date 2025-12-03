@@ -67,7 +67,7 @@ try {
     }
 
     if ($action === "fail") {
-        $pdo->prepare("UPDATE quests SET status='failed' WHERE id=?")->execute([$id]);
+        $pdo->prepare("UPDATE quests SET status='failed', completed_at=NOW() WHERE id=?")->execute([$id]);
         $pdo->prepare("UPDATE users SET xp = GREATEST(xp - ?,0) WHERE id=?")->execute([$penalty, $user_id]);
 
         $xp      = (int)$pdo->query("SELECT xp FROM users WHERE id=$user_id")->fetchColumn();

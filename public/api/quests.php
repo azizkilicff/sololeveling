@@ -74,14 +74,13 @@ try {
             ORDER BY 
               CASE 
                 WHEN status = "pending" THEN 0
-                WHEN status IN ("completed","failed") THEN 1
-                ELSE 2
+                ELSE 1
               END,
               CASE 
                 WHEN status = "pending" THEN due_date 
               END ASC,
               CASE 
-                WHEN status IN ("completed","failed") THEN IFNULL(completed_at, created_at)
+                WHEN status <> "pending" THEN IFNULL(completed_at, created_at)
               END DESC,
               created_at DESC
         ');
@@ -189,6 +188,10 @@ try {
         $desc  = trim((string)($input['description'] ?? ''));
         $due   = (string)($input['due_date'] ?? date('Y-m-d'));
         $difficulty = strtolower(trim((string)($input['difficulty'] ?? '')));
+        $repeat_mode = strtolower(trim((string)($input['repeat_mode'] ?? 'none')));
+        if (!in_array($repeat_mode, ['none','daily','weekly'])) {
+            $repeat_mode = 'none';
+        }
 
         // Update with difficulty (XP recalculation)
         if ($difficulty !== '') {
@@ -198,18 +201,18 @@ try {
 
             $stmt = $pdo->prepare('
                 UPDATE quests 
-                SET title=?, description=?, due_date=?, reward_xp=?, penalty_xp=? 
+                SET title=?, description=?, due_date=?, reward_xp=?, penalty_xp=?, repeat_mode=? 
                 WHERE id=? AND user_id=?
             ');
-            $stmt->execute([$title, $desc, $due, $reward, $penalty, $id, $user_id]);
+            $stmt->execute([$title, $desc, $due, $reward, $penalty, $repeat_mode, $id, $user_id]);
 
         } else {
             $stmt = $pdo->prepare('
                 UPDATE quests 
-                SET title=?, description=?, due_date=? 
+                SET title=?, description=?, due_date=?, repeat_mode=? 
                 WHERE id=? AND user_id=?
             ');
-            $stmt->execute([$title, $desc, $due, $id, $user_id]);
+            $stmt->execute([$title, $desc, $due, $repeat_mode, $id, $user_id]);
         }
 
         echo json_encode(['ok'=>true]);

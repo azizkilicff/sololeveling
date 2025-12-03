@@ -40,6 +40,19 @@ function sync_level_achievements(PDO $pdo, int $userId, int $level): array {
     return $newlyEarned;
 }
 
+function sync_streak_achievements(PDO $pdo, int $userId, int $streak): array {
+    $codes = [];
+    if ($streak >= 3)  $codes[] = 'streak_3';
+    if ($streak >= 7)  $codes[] = 'streak_7';
+    $new = [];
+    foreach ($codes as $code) {
+        $stmt = $pdo->prepare("INSERT IGNORE INTO user_achievements (user_id, code) VALUES (?, ?)");
+        $stmt->execute([$userId, $code]);
+        if ($stmt->rowCount() > 0) $new[] = $code;
+    }
+    return $new;
+}
+
 function achievement_catalog(): array {
     return [
         'first_quest' => ['title' => 'First Quest', 'desc' => 'Complete your first quest.'],

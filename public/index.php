@@ -5,20 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Solo Leveling — Habit Quests</title>
 
-  <!-- UI libs (Daisy + Tailwind) -->
   <link href="https://cdn.jsdelivr.net/npm/daisyui@3.1.7/dist/full.css" rel="stylesheet" type="text/css" />
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="/favicon.png" />
 
-  <!-- Favicon (NO leading slash) -->
-  <link rel="icon" type="image/png" href="favicon.png" />
-
-  <!-- Custom CSS (NO leading slash) -->
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="/styles.css" />
 </head>
 
 <body class="page">
@@ -75,6 +69,24 @@
         <div id="xp-fill" class="xp-fill"></div>
       </div>
       <div id="xp-text" class="xp-caption">0 / 100 XP</div>
+    </section>
+    <section id="admin-page" class="hidden dashboard-grid">
+      <div class="panel">
+        <div class="panel__head">
+          <div>
+            <h3>User management</h3>
+          </div>
+        </div>
+        <ul id="admin-users" class="groups-list"></ul>
+      </div>
+      <div class="panel">
+        <div class="panel__head">
+          <div>
+            <h3>Group management</h3>
+          </div>
+        </div>
+        <ul id="admin-groups" class="groups-list"></ul>
+      </div>
     </section>
 
     <!-- ===== AUTH ===== -->
@@ -378,6 +390,6 @@
       </div>
     </div>
   </dialog>
-  <script src="app.js"></script>
+  <script src="/app.js"></script>
 </body>
 </html>

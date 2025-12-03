@@ -22,6 +22,7 @@ const questList   = $("quest-list");
 const qTitle      = $("q-title");
 const qDesc       = $("q-desc");
 const qDue        = $("q-due");
+const qRepeat     = $("q-repeat");
 const btnAdd      = $("btn-add");
 
 const btnLogin    = $("btn-login");
@@ -53,6 +54,7 @@ const profileStreak = $("profile-streak");
 const profileAchList = $("profile-ach-list");
 const profileAvatar = $("profile-avatar");
 const navProfileBtn = $("nav-profile");
+const navAdminBtn   = $("nav-admin");
 const memberModal = $("member-modal");
 const memberUsername = $("member-username");
 const memberKickBtn = $("mm-kick");
@@ -71,8 +73,10 @@ const qdDiff = $("qd-diff");
 const qdReward = $("qd-reward");
 const qdPenalty = $("qd-penalty");
 const qdRepeat = $("qd-repeat");
-const qdTags = $("qd-tags");
 const qdClose = $("qd-close");
+const adminPage     = $("admin-page");
+const adminUsers    = $("admin-users");
+const adminGroups   = $("admin-groups");
 
 // Groups page
 const groupsPage      = $("groups-page");
@@ -96,7 +100,7 @@ async function api(path, method = "GET", data) {
   const opts = { method, headers: { "Content-Type": "application/json" } };
   if (data) opts.body = JSON.stringify(data);
 
-  const res = await fetch(path, opts);
+  const res = await fetch("/" + path, opts);
   let text = "", payload = null;
   try { text = await res.text(); payload = text ? JSON.parse(text) : null; } catch {}
   if (!res.ok) throw new Error((payload && payload.error) || text || `HTTP ${res.status}`);
@@ -120,10 +124,11 @@ function computeLevelDetails(totalXp) {
 
 function setAuthUI(isAuthed) {
   // hide/show the Dashboard + Groups buttons only
+  const isAdmin = isAuthed && LAST_USER && LAST_USER.role === "admin";
   document.querySelectorAll(".requires-auth").forEach(el => {
-    el.classList.toggle("hidden", !isAuthed);
+    el.classList.toggle("hidden", !isAuthed || isAdmin);
   });
-  // keep navbar visible so Logout shows; if you want Logout hidden too, add: navbar.classList.toggle("hidden", !isAuthed);
+  // Admin uses only logout; no extra toggles needed here
   navbar?.classList.remove("hidden");
 }
 
@@ -133,12 +138,16 @@ function showAuth() {
   statsWrap.classList.add("hidden");
   dash.classList.add("hidden");
   groupsPage.classList.add("hidden");
+  achievementsPage?.classList.add("hidden");
+  profilePage?.classList.add("hidden");
+  adminPage?.classList.add("hidden");
   document.body.classList.add("auth-mode");
   navbar?.classList.add("hidden");
   setAuthUI(false); // hides Dashboard/Groups buttons
 }
 
 function showDashboard() {
+  if (IS_ADMIN) { showAdmin(); return; }
   auth.classList.add("hidden");
   heroSection?.classList.add("hidden");
   statsWrap.classList.remove("hidden");
@@ -157,6 +166,7 @@ function showGroups() {
   dash.classList.add("hidden");
   achievementsPage?.classList.add("hidden");
   profilePage?.classList.add("hidden");
+  adminPage?.classList.add("hidden");
   groupsPage.classList.remove("hidden");
   document.body.classList.remove("auth-mode");
   navbar?.classList.remove("hidden");
@@ -171,6 +181,7 @@ function showAchievements() {
   groupsPage.classList.add("hidden");
   achievementsPage?.classList.remove("hidden");
   profilePage?.classList.add("hidden");
+  adminPage?.classList.add("hidden");
   document.body.classList.remove("auth-mode");
   navbar?.classList.remove("hidden");
   setAuthUI(true);
@@ -185,6 +196,21 @@ function showProfile() {
   groupsPage.classList.add("hidden");
   achievementsPage?.classList.add("hidden");
   profilePage?.classList.remove("hidden");
+  adminPage?.classList.add("hidden");
+  document.body.classList.remove("auth-mode");
+  navbar?.classList.remove("hidden");
+  setAuthUI(true);
+}
+
+function showAdmin() {
+  auth.classList.add("hidden");
+  heroSection?.classList.add("hidden");
+  statsWrap.classList.add("hidden");
+  dash.classList.add("hidden");
+  groupsPage.classList.add("hidden");
+  achievementsPage?.classList.add("hidden");
+  profilePage?.classList.add("hidden");
+  adminPage?.classList.remove("hidden");
   document.body.classList.remove("auth-mode");
   navbar?.classList.remove("hidden");
   setAuthUI(true);
@@ -196,6 +222,7 @@ let LAST_ACHIEVEMENTS = [];
 let LAST_USER = null;
 let ACHIEVEMENT_CATALOG = {};
 let LAST_ACHIEVEMENTS_UNLOCKED = [];
+let IS_ADMIN = false;
 let editingQuestId = null;
 
 async function refreshMe() {
@@ -216,6 +243,7 @@ async function refreshMe() {
     LAST_ACHIEVEMENTS_UNLOCKED = achievements;
     LAST_ACHIEVEMENTS = achievements;
     LAST_USER = user;
+    IS_ADMIN = (user.role === "admin");
 
     stats.textContent = `Level ${level} • Total XP ${xp}`;
     const pct = cap ? Math.min(100, Math.round((xpInLevel / cap) * 100)) : 0;
@@ -224,8 +252,13 @@ async function refreshMe() {
     if (streakPill) streakPill.textContent = `Streak: ${streak} day${streak === 1 ? "" : "s"}`;
     renderAchievements();
 
-    showDashboard();
-    await loadQuests();
+    if (IS_ADMIN) {
+      showAdmin();
+      try { await loadAdminData(); } catch (e) { console.error(e); }
+    } else {
+      showDashboard();
+      await loadQuests();
+    }
   } catch {
     showAuth();
   }
@@ -347,6 +380,7 @@ function openEditQuest(q) {
   if (qDesc) qDesc.value = q.description || "";
   if (qDue) qDue.value = q.due_date || "";
   if (qDiff) qDiff.value = resolveDifficulty(q);
+  if (qRepeat) qRepeat.value = q.repeat_mode || "none";
   addModal?.showModal();
 }
 
@@ -418,6 +452,58 @@ function renderProfile() {
   if (profileAvatar && LAST_USER.username) {
     const initials = (LAST_USER.name || LAST_USER.username).split(" ").map(s => s[0] || "").join("").slice(0,2).toUpperCase();
     profileAvatar.textContent = initials;
+  }
+}
+
+// ===== Admin =====
+async function loadAdminData() {
+  if (!IS_ADMIN || !CURRENT_USER_ID) return;
+  let users = [], groups = [];
+  try {
+    [users, groups] = await Promise.all([
+      api("api/admin.php?action=users"),
+      api("api/admin.php?action=groups")
+    ]);
+  } catch (e) {
+    console.error("Admin data load failed:", e);
+    return;
+  }
+
+  if (adminUsers) {
+    adminUsers.innerHTML = users.map(u => `
+      <li class="flex justify-between items-center p-3 rounded bg-[#0b131a] border border-[#1d2a38]">
+        <span>${u.username} <span class="opacity-60">(${u.email})</span></span>
+        <span class="flex gap-2">
+          <span class="pill pill--mini pill--ghost">${u.role}</span>
+          ${u.role !== "admin" ? `<button class="chip-btn danger" data-del-user="${u.id}">Delete</button>` : ""}
+        </span>
+      </li>`).join("");
+
+    adminUsers.querySelectorAll("[data-del-user]").forEach(b => {
+      const uid = parseInt(b.dataset.delUser, 10);
+      b.addEventListener("click", async () => {
+        if (!confirm("Delete this user?")) return;
+        await api("api/admin.php", "POST", { action: "delete_user", id: uid });
+        await loadAdminData();
+      });
+    });
+  }
+
+  if (adminGroups) {
+    adminGroups.innerHTML = groups.map(g => `
+      <li class="flex justify-between items-center p-3 rounded bg-[#0b131a] border border-[#1d2a38]">
+        <span>${g.name} <span class="opacity-60">(members: ${g.members || 0})</span></span>
+        <button class="chip-btn danger" data-del-group="${g.id}">Delete</button>
+      </li>`).join("");
+
+    adminGroups.querySelectorAll("[data-del-group]").forEach(b => {
+      const gid = parseInt(b.dataset.delGroup, 10);
+      b.addEventListener("click", async () => {
+        if (!confirm("Delete this group?")) return;
+        await api("api/admin.php", "POST", { action: "delete_group", id: gid });
+        await loadAdminData();
+      });
+    });
   }
 }
 
@@ -764,11 +850,11 @@ window.addEventListener("scroll", onScroll, { passive: true });
 
 // ===== NEW CREATE QUEST (supports repeat) =====
 async function createQuest() {
-  const title  = qTitle.value.trim();
-  const desc   = qDesc.value.trim();
+  const title  = (qTitle.value || "").trim();
+  const desc   = (qDesc.value || "").trim();
   const due    = qDue.value || new Date().toISOString().slice(0,10);
-  const diff   = qDiff.value;
-  const repeat = $("q-repeat")?.value || "none";
+  const diff   = qDiff.value || "medium";
+  const repeat = qRepeat?.value || "none";
 
   if (!title) {
     alert("Title required");
@@ -786,7 +872,7 @@ async function createQuest() {
   qTitle.value = "";
   qDesc.value = "";
   qDiff.value = "medium";
-  $("q-repeat").value = "none";
+  if (qRepeat) qRepeat.value = "none";
 
   addModal.close();
   await loadQuests();
@@ -824,15 +910,6 @@ btnLogout?.addEventListener("click", async () => {
 
 // Quests (difficulty only; no custom XP)
 const qDiff = document.getElementById('q-diff');
-async function createQuest() {
-  await api("api/quests.php", "POST", {
-    title:       (qTitle.value || "").trim(),
-    description: (qDesc.value || "").trim(),
-    due_date:    qDue.value || new Date().toISOString().slice(0,10),
-    difficulty:  (qDiff?.value || "medium")
-  });
-}
-
 btnAdd?.addEventListener("click", async () => {
   try {
     if (editingQuestId) {
@@ -841,7 +918,8 @@ btnAdd?.addEventListener("click", async () => {
         title:       (qTitle.value || "").trim(),
         description: (qDesc.value || "").trim(),
         due_date:    qDue.value || new Date().toISOString().slice(0,10),
-        difficulty:  (qDiff?.value || "medium")
+        difficulty:  (qDiff?.value || "medium"),
+        repeat_mode: qRepeat?.value || "none"
       });
       editingQuestId = null;
       if (addModalTitle) addModalTitle.textContent = "Add quest";
@@ -851,6 +929,7 @@ btnAdd?.addEventListener("click", async () => {
     }
     qTitle.value = ""; qDesc.value = "";
     if (qDiff) qDiff.value = "medium";
+    if (qRepeat) qRepeat.value = "none";
     await loadQuests();
   } catch (e) {
     alert(e.message);
@@ -863,6 +942,11 @@ navDashBtn?.addEventListener("click", showDashboard);
 btnBack?.addEventListener("click", showDashboard);
 navGroupsBtn?.addEventListener("click", async () => { showGroups(); await loadGroups(); });
 navAchievementsBtn?.addEventListener("click", showAchievements);
+navAdminBtn?.addEventListener("click", async () => {
+  if (!IS_ADMIN) return;
+  showAdmin();
+  await loadAdminData();
+});
 navProfileBtn?.addEventListener("click", () => {
   showProfile();
   renderProfile();

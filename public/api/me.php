@@ -24,7 +24,7 @@ try {
 $user_id = (int)$_SESSION['user_id'];
 
 // fetch base user row
-$stmt = $pdo->prepare("SELECT id, username, name, email, xp FROM users WHERE id=?");
+$stmt = $pdo->prepare("SELECT id, username, name, email, xp, role FROM users WHERE id=?");
 $stmt->execute([$user_id]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -48,6 +48,7 @@ $user['xp_cap'] = $details['xp_cap'];
 $user['streak'] = (int)$progress['streak_count'];
 
 $earnedLevel = sync_level_achievements($pdo, $user_id, $user['level']);
+$earnedStreak = sync_streak_achievements($pdo, $user_id, $user['streak']);
 $achievements = fetch_achievements($pdo, $user_id);
 
 // Fallback: if insert failed silently, still reflect by augmenting response
@@ -57,6 +58,12 @@ if ($user['level'] >= 5 && !in_array('level_5', $codes, true)) {
 }
 if ($user['level'] >= 10 && !in_array('level_10', $codes, true)) {
     $achievements[] = ['code' => 'level_10', 'earned_at' => date('Y-m-d H:i:s')];
+}
+$streakCodes = ['streak_3', 'streak_7'];
+foreach ($streakCodes as $code) {
+    if ($user['streak'] >= (int)filter_var($code, FILTER_SANITIZE_NUMBER_INT) && !in_array($code, $codes, true)) {
+        $achievements[] = ['code' => $code, 'earned_at' => date('Y-m-d H:i:s')];
+    }
 }
 
 $user['achievements'] = $achievements;

@@ -35,5 +35,6 @@ $user['xp_in_level'] = $details['xp_in_level'];
 $user['xp_cap'] = $details['xp_cap'];
 $user['streak'] = (int)$progress['streak_count'];
 sync_level_achievements($pdo, $uid, $user['level']);
+sync_streak_achievements($pdo, $uid, $user['streak']);
 
 echo json_encode(['user' => $user]);
